@@ -1,0 +1,17 @@
+{
+  "name": "bagheri/grandpa",
+  "authors": [
+    {
+      "name": "Mahdi Bagheri",
+      "email": "mb.programmer@yahoo.com"
+    }
+  ],
+  "require": {
+    "leafo/scssphp": "^0.7.5"
+  },
+  "autoload": {
+    "psr-4": {
+      "Grandpa\\": "src/"
+    }
+  }
+}
