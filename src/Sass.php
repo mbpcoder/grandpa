@@ -26,7 +26,7 @@ class Sass
         return $this;
     }
 
-    public function saveTo($destination)
+    public function saveAs($destination)
     {
         file_put_contents($destination, $this->compiledSass);
     }
