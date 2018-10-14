@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "content-hash": "b03c449d028b68cf9731d1478a51cc4b",
+    "content-hash": "08381e5f7faca1e4fcc789c8dc57d2b0",
     "packages": [
         {
             "name": "leafo/scssphp",
@@ -57,6 +57,62 @@
                 "stylesheet"
             ],
             "time": "2018-02-09T02:04:21+00:00"
+        },
+        {
+            "name": "teqneers/php-stream-wrapper-for-git",
+            "version": "v2.0.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/teqneers/PHP-Stream-Wrapper-for-Git.git",
+                "reference": "ef4cfd4941e3979ccb972c71b4329275036778ed"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/teqneers/PHP-Stream-Wrapper-for-Git/zipball/ef4cfd4941e3979ccb972c71b4329275036778ed",
+                "reference": "ef4cfd4941e3979ccb972c71b4329275036778ed",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=7.0.0"
+            },
+            "require-dev": {
+                "knplabs/gaufrette": "~0.5",
+                "phpunit/phpunit": "~5.7 >=5.7.11",
+                "symfony/yaml": "~3.4"
+            },
+            "suggest": {
+                "knplabs/gaufrette": "to use the Gaufrette adapter"
+            },
+            "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-master": "2.0.x-dev"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Stefan Gehrig",
+                    "email": "gehrig@teqneers.de",
+                    "homepage": "http://opensource.teqneers.de/"
+                }
+            ],
+            "description": "Git Stream Wrapper for PHP",
+            "homepage": "https://github.com/teqneers/PHP-Stream-Wrapper-for-Git",
+            "keywords": [
+                "git",
+                "stream-wrapper",
+                "streamwrapper"
+            ],
+            "time": "2018-03-19T14:31:54+00:00"
         }
     ],
     "packages-dev": [],
