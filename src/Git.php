@@ -13,4 +13,18 @@ class Git
     {
 
     }
+
+    public function commit()
+    {
+
+    }
+
+    public function getChanges($revision = 'HEAD')
+    {
+
+    }
+
+    public function logs()
+    {
+    }
 }
