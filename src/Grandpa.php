@@ -62,6 +62,11 @@ class Grandpa
         return $this->http ??= new Http();
     }
 
+    public function telegram(): Telegram
+    {
+        return Telegram::fromEnv();
+    }
+
     public function css()
     {
         return $this;

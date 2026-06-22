@@ -9,6 +9,7 @@ use Grandpa\Http;
 use Grandpa\Ssh;
 use Grandpa\Storage;
 use Grandpa\Task;
+use Grandpa\Telegram;
 
 if (!function_exists('task')) {
     function task(string $name, Closure $callback): Task
@@ -49,6 +50,13 @@ if (!function_exists('say')) {
     function say(string $message): void
     {
         Grandpa::instance()->say($message);
+    }
+}
+
+if (!function_exists('telegram')) {
+    function telegram(): Telegram
+    {
+        return Grandpa::instance()->telegram();
     }
 }
 
