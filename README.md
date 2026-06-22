@@ -59,6 +59,19 @@ config bin-dir --absolute` to find it) is on your shell's `PATH`. Once it is,
 every command in this README also works as plain `grandpa ...` instead of
 `php bin/grandpa ...`.
 
+### Without Composer: download the `.phar`
+
+If you don't want to add Grandpa as a Composer dependency, download the
+pre-built [`grandpa.phar`](https://raw.githubusercontent.com/mbpcoder/grandpa/claude/tender-davinci-rkpskn/grandpa.phar)
+and drop it into your project — it bundles all of Grandpa's dependencies, so
+it works standalone with just PHP:
+
+```
+curl -LO https://raw.githubusercontent.com/mbpcoder/grandpa/claude/tender-davinci-rkpskn/grandpa.phar
+chmod +x grandpa.phar
+php grandpa.phar deploy
+```
+
 ### Working on this repository directly
 
 If you're hacking on Grandpa itself (this repo), install dependencies with:
