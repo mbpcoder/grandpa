@@ -12,7 +12,7 @@ class Grandpa
     private array $tasks = [];
 
     private Git|null $git = null;
-    private Storage|null $storage = null;
+    private StorageManager|null $storage = null;
     private Ssh|null $ssh = null;
     private Http|null $http = null;
 
@@ -67,9 +67,9 @@ class Grandpa
         }
     }
 
-    public function ftp(): Storage
+    public function storage(): StorageManager
     {
-        return $this->storage ??= Storage::fromEnv();
+        return $this->storage ??= new StorageManager();
     }
 
     public function ssh(): Ssh
@@ -141,7 +141,7 @@ class Grandpa
 
     public function git(): Git
     {
-        return $this->git ??= new Git($this->ftp());
+        return $this->git ??= new Git();
     }
 }
 
@@ -164,9 +164,9 @@ class Grandpa
 //
 //// deploy via the task system
 //task('deploy', function () {
-//    $files = git()->changedFiles();
-//    ftp()->upload($files);
-//    ftp()->delete(git()->deletedFiles());
-//    git()->saveRevision();
+//    $revision = storage()->ftp()->get('.revision');
+//    storage()->ftp()->upload(git()->changedFiles($revision));
+//    storage()->ftp()->delete(git()->deletedFiles($revision));
+//    storage()->ftp()->put('.revision', git()->currentHead());
 //    say('Deployed');
 //});

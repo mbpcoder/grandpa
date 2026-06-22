@@ -3,20 +3,21 @@
 declare(strict_types=1);
 
 task('deploy', function () {
-    $files = git()->changedFiles();
+    $revision = storage()->ftp()->get('.revision');
 
-    ftp()->upload($files);
-    ftp()->delete(git()->deletedFiles());
+    storage()->ftp()->upload(git()->changedFiles($revision));
+    storage()->ftp()->delete(git()->deletedFiles($revision));
 
-    git()->saveRevision();
+    storage()->ftp()->put('.revision', git()->currentHead());
 
     say('Deployed');
 });
 
 // Shows what `deploy` would upload/delete without touching the FTP server.
 task('deploy:dry-run', function () {
-    $uploaded = git()->changedFiles();
-    $deleted = git()->deletedFiles();
+    $revision = storage()->ftp()->get('.revision');
+    $uploaded = git()->changedFiles($revision);
+    $deleted = git()->deletedFiles($revision);
 
     say('Dry run: nothing will be uploaded or deleted.');
     say('');

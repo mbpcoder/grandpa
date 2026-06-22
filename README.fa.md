@@ -85,14 +85,14 @@ composer install
    کنید.
 
    ```
-   DEPLOY_FTP_HOST=ftp.example.com
-   DEPLOY_FTP_USERNAME=
-   DEPLOY_FTP_PASSWORD=
-   DEPLOY_FTP_PORT=21
-   DEPLOY_FTP_PATH=/
-   DEPLOY_FTP_PASSIVE=true
+   GRANDPA_FTP_HOST=ftp.example.com
+   GRANDPA_FTP_USERNAME=
+   GRANDPA_FTP_PASSWORD=
+   GRANDPA_FTP_PORT=21
+   GRANDPA_FTP_PATH=/
+   GRANDPA_FTP_PASSIVE=true
 
-   DEPLOY_SSH_HOST=user@example.com
+   GRANDPA_SSH_HOST=user@example.com
 
    GRANDPA_TELEGRAM_BOT_TOKEN=
    GRANDPA_TELEGRAM_BASE_URL=https://api.telegram.org
@@ -100,15 +100,30 @@ composer install
    GRANDPA_TELEGRAM_TOPIC_ID=
    ```
 
-   - `DEPLOY_FTP_PATH` پوشه‌ی پایه‌ی ریموت است که همه‌چیز نسبت به آن آپلود
+   - `GRANDPA_FTP_PATH` پوشه‌ی پایه‌ی ریموت است که همه‌چیز نسبت به آن آپلود
      می‌شود.
-   - `DEPLOY_SSH_HOST` فقط برای اجرای دستورات پس از دیپلوی از طریق SSH استفاده
+   - `GRANDPA_SSH_HOST` فقط برای اجرای دستورات پس از دیپلوی از طریق SSH استفاده
      می‌شود (FTP نمی‌تواند دستور اجرا کند).
    - متغیرهای `GRANDPA_TELEGRAM_*` فقط زمانی لازم‌اند که یک وظیفه `telegram()`
      را برای ارسال اعلان فراخوانی کند.
    - به‌صورت اختیاری `vlucas/phpdotenv` را نصب کنید
      (`composer require vlucas/phpdotenv`) برای پارس کامل‌تر `.env`؛ در صورت
      عدم نصب، Grandpa از یک پارسر داخلی ساده استفاده می‌کند.
+
+   #### بک‌اندهای ذخیره‌سازی
+
+   `storage()` به چند بک‌اند ذخیره‌سازی فایل قابل تبادل دسترسی می‌دهد که همگی
+   API یکسانی برای `upload()`/`delete()`/`uploadDir()`/`purge()` دارند. فقط
+   موردی که نیاز دارید را پیکربندی کنید — بک‌اندهای استفاده‌نشده هرگز متصل
+   نمی‌شوند.
+
+   | بک‌اند | کمک‌کننده | متغیرهای محیطی |
+   | --- | --- | --- |
+   | FTP/FTPS | `storage()->ftp()` | `GRANDPA_FTP_HOST`، `GRANDPA_FTP_USERNAME`، `GRANDPA_FTP_PASSWORD`، `GRANDPA_FTP_PORT`، `GRANDPA_FTP_PATH`، `GRANDPA_FTP_PASSIVE` |
+   | SFTP | `storage()->sftp()` | `GRANDPA_SFTP_HOST`، `GRANDPA_SFTP_USERNAME`، `GRANDPA_SFTP_PASSWORD` یا `GRANDPA_SFTP_PRIVATE_KEY`/`GRANDPA_SFTP_PASSPHRASE`، `GRANDPA_SFTP_PORT`، `GRANDPA_SFTP_PATH` |
+   | S3 / سازگار با S3 | `storage()->s3()` | `GRANDPA_S3_KEY`، `GRANDPA_S3_SECRET`، `GRANDPA_S3_REGION`، `GRANDPA_S3_BUCKET`، `GRANDPA_S3_PATH`، `GRANDPA_S3_ENDPOINT` (برای MinIO/DigitalOcean Spaces/و غیره)، `GRANDPA_S3_USE_PATH_STYLE` |
+   | مخزن GitLab | `storage()->gitlab()` | `GRANDPA_GITLAB_PROJECT_ID`، `GRANDPA_GITLAB_BRANCH`، `GRANDPA_GITLAB_BASE_URL`، `GRANDPA_GITLAB_TOKEN`، `GRANDPA_GITLAB_PATH` |
+   | Google Drive | `storage()->googleDrive()` | `GRANDPA_GOOGLE_DRIVE_CLIENT_ID`، `GRANDPA_GOOGLE_DRIVE_CLIENT_SECRET`، `GRANDPA_GOOGLE_DRIVE_REFRESH_TOKEN`، `GRANDPA_GOOGLE_DRIVE_PATH` |
 
    > [!WARNING]
    > هرگز `.env` را کامیت نکنید — این فایل اطلاعات اعتباری FTP، SSH و تلگرام
@@ -130,7 +145,7 @@ composer install
    `deploy` متناسب با آنچه پیدا کرده می‌نویسد: یک مرحله‌ی بیلد
    (`npm`/`yarn`/`pnpm run build`) در صورت وجود اسکریپت `build`، آپلود
    تدریجی مبتنی بر git در صورت بودن یک مخزن گیت، و
-   `ftp()->purge()`/`uploadDir()` برای پوشه‌ی خروجی بیلد شناسایی‌شده.
+   `storage()->ftp()->purge()`/`uploadDir()` برای پوشه‌ی خروجی بیلد شناسایی‌شده.
 
    پرچم `-i` یا `--interactive` را برای دریافت اطلاعات اعتباری FTP/SSH از طریق
    پرامپت اضافه کنید که در `.env` نوشته می‌شوند (یک `.env` موجود دست‌نخورده
@@ -149,15 +164,15 @@ composer install
 <?php
 
 task('deploy', function () {
-    $files = git()->changedFiles();          // فایل‌های اضافه/تغییریافته از آخرین دیپلوی
+    $revision = storage()->ftp()->get('.revision');   // هش آخرین کامیت دیپلوی‌شده، یا null در اولین دیپلوی
 
-    ftp()->upload($files);                    // فقط فایل‌های تغییریافته را آپلود کن
-    ftp()->delete(git()->deletedFiles());    // فایل‌های حذف‌شده از git را حذف کن
+    storage()->ftp()->upload(git()->changedFiles($revision));    // آپلود فایل‌های اضافه/تغییریافته
+    storage()->ftp()->delete(git()->deletedFiles($revision));    // فایل‌های حذف‌شده از git را حذف کن
 
-    ftp()->purge('public/build');             // یک پوشه‌ی ریموت را پاک کن
-    ftp()->uploadDir('public/build');        // یک پوشه‌ی محلی کامل را آپلود کن (مثلاً اسکریپت‌های بیلدشده)
+    storage()->ftp()->purge('public/build');             // یک پوشه‌ی ریموت را پاک کن
+    storage()->ftp()->uploadDir('public/build');        // یک پوشه‌ی محلی کامل را آپلود کن (مثلاً اسکریپت‌های بیلدشده)
 
-    git()->saveRevision();                    // کامیت دیپلوی‌شده را روی سرور ثبت کن
+    storage()->ftp()->put('.revision', git()->currentHead());    // کامیت دیپلوی‌شده را روی سرور ثبت کن
 
     ssh()->run('cd /var/www/app && php artisan migrate --force && php artisan optimize');
 
@@ -167,17 +182,19 @@ task('deploy', function () {
 
 نحوه‌ی کار آپلود تدریجی:
 
-- Grandpa یک فایل `.revision` روی سرور ریموت نگه می‌دارد که حاوی هش آخرین
-  کامیت دیپلوی‌شده است.
-- `git()->changedFiles()` / `git()->deletedFiles()` با استفاده از
-  `git diff --name-only --diff-filter=ACMR|D <revision>..HEAD`، `HEAD` فعلی را
-  با آن نسخه مقایسه می‌کنند.
-- اگر هنوز `.revision` ریموتی وجود نداشته باشد، به‌عنوان اولین دیپلوی در نظر
-  گرفته می‌شود و همه‌ی فایل‌های ردیابی‌شده (`git ls-files`) آپلود می‌شوند.
-- `git()->saveRevision()` هش `HEAD` فعلی را در فایل `.revision` ریموت
-  می‌نویسد.
+- شما یک فایل `.revision` را از هرجا که ذخیره کرده‌اید (سرور ریموت، یک
+  پایگاه‌داده و غیره) می‌خوانید که حاوی هش آخرین کامیت دیپلوی‌شده است، و آن را
+  صریحاً به `git()` پاس می‌دهید.
+- `git()->changedFiles($revision)` / `git()->deletedFiles($revision)` با
+  استفاده از `git diff --name-only --diff-filter=ACMR|D <revision>..HEAD`،
+  `HEAD` فعلی را با آن نسخه مقایسه می‌کنند.
+- اگر `$revision` برابر `null` باشد (مثلاً فایل `.revision` هنوز وجود ندارد)،
+  همه‌ی فایل‌های ردیابی‌شده (`git ls-files`) به‌عنوان اضافه‌شده در نظر گرفته
+  می‌شوند — مفید برای اولین دیپلوی.
+- بعد از آپلود، `git()->currentHead()` را در فایل `.revision` خودتان بنویسید
+  تا دیپلوی بعدی بتواند با آن مقایسه کند.
 
-توابع کمکی موجود: `task()`، `git()`، `ftp()`، `ssh()`، `http()`،
+توابع کمکی موجود: `task()`، `git()`، `storage()`، `ssh()`، `http()`،
 `telegram()`، `say()`، `env()`.
 
 `http()` یک کلاینت کوچک مبتنی بر Guzzle برای فراخوانی URL‌ها در طول دیپلوی
@@ -290,12 +307,12 @@ SSH. فایل‌های تغییریافته را آپلود کنید، سپس ی
 <?php
 
 task('deploy', function () {
-    $files = git()->changedFiles();
+    $revision = storage()->ftp()->get('.revision');
 
-    ftp()->upload($files);
-    ftp()->delete(git()->deletedFiles());
+    storage()->ftp()->upload(git()->changedFiles($revision));
+    storage()->ftp()->delete(git()->deletedFiles($revision));
 
-    git()->saveRevision();
+    storage()->ftp()->put('.revision', git()->currentHead());
 
     // یک مسیر روی سایت زنده را برای پاک‌سازی کش / گرم‌کردن / بررسی سلامت فراخوانی کن.
     $response = http()->get('https://example.com/__deploy/clear-cache');
@@ -305,7 +322,7 @@ task('deploy', function () {
 ```
 
 > [!NOTE]
-> `ftp()` با یک سرور FTP/FTPS ساده صحبت می‌کند، که چیزی است که بیشتر
+> `storage()->ftp()` با یک سرور FTP/FTPS ساده صحبت می‌کند، که چیزی است که بیشتر
 > هاست‌های اشتراکی فراهم می‌کنند. در این نوع هاست SSH وجود ندارد، پس هر
 > مرحله‌ی «artisan migrate» یا «پاک‌سازی کش» باید از طریق یک نقطه‌ی پایانی
 > HTTP که اپلیکیشن شما برای این هدف در معرض قرار می‌دهد انجام شود (آن را با
@@ -321,15 +338,15 @@ task('deploy', function () {
 <?php
 
 task('deploy', function () {
-    $files = git()->changedFiles();
+    $revision = storage()->ftp()->get('.revision');
 
-    ftp()->upload($files);
-    ftp()->delete(git()->deletedFiles());
+    storage()->ftp()->upload(git()->changedFiles($revision));
+    storage()->ftp()->delete(git()->deletedFiles($revision));
 
-    ftp()->purge('public/build');
-    ftp()->uploadDir('public/build');
+    storage()->ftp()->purge('public/build');
+    storage()->ftp()->uploadDir('public/build');
 
-    git()->saveRevision();
+    storage()->ftp()->put('.revision', git()->currentHead());
 
     ssh()->run('cd /var/www/app && composer install --no-dev && php artisan migrate --force');
     ssh()->run('cd /var/www/app && php artisan optimize:clear && php artisan optimize');
@@ -338,7 +355,7 @@ task('deploy', function () {
 });
 ```
 
-`ssh()->run()` با استفاده از `DEPLOY_SSH_HOST` (مثلاً `deploy@example.com`)
+`ssh()->run()` با استفاده از `GRANDPA_SSH_HOST` (مثلاً `deploy@example.com`)
 به فایل اجرایی محلی `ssh` فراخوانی می‌شود، پس به کلید/ایجنت SSH شما که از
 پیش راه‌اندازی شده وابسته است — هیچ فیلد رمز عبوری برای آن وجود ندارد. پیش
 از اجرای `grandpa deploy`، یک کلید SSH با هاست راه‌اندازی کنید
@@ -346,15 +363,9 @@ task('deploy', function () {
 `ssh deploy@example.com` بدون پرامپت کار می‌کند.
 
 > [!NOTE]
-> کمک‌کننده‌ی داخلی `ftp()` در Grandpa فقط FTP/FTPS را صحبت می‌کند (از طریق
-> `league/flysystem-ftp`)، نه SFTP. اگر هاست شما فقط SFTP را می‌پذیرد و به
-> انتقال فایل واقعی (نه فقط اجرای دستورات روی SSH) نیاز دارید،
-> `rsync`/`git pull` را روی سرور از طریق `ssh()->run()` به‌جای
-> `ftp()->upload()` اجرا کنید، مثلاً:
->
-> ```php
-> ssh()->run('cd /var/www/app && git pull --ff-only && php artisan migrate --force');
-> ```
+> اگر هاست شما فقط SFTP را می‌پذیرد، به‌جای `storage()->ftp()` از
+> `storage()->sftp()` استفاده کنید — همان API برای `upload()`/`delete()`/
+> `uploadDir()`، با تنظیم از طریق متغیرهای `GRANDPA_SFTP_*`.
 
 #### اطلاع‌رسانی به یک چت تلگرام پس از دیپلوی
 
@@ -366,12 +377,12 @@ task('deploy', function () {
 
 task('deploy', function () {
     try {
-        $files = git()->changedFiles();
+        $revision = storage()->ftp()->get('.revision');
 
-        ftp()->upload($files);
-        ftp()->delete(git()->deletedFiles());
+        storage()->ftp()->upload(git()->changedFiles($revision));
+        storage()->ftp()->delete(git()->deletedFiles($revision));
 
-        git()->saveRevision();
+        storage()->ftp()->put('.revision', git()->currentHead());
 
         telegram()->message('Deploy succeeded for ' . git()->currentBranch())->send();
     } catch (\Throwable $e) {

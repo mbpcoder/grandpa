@@ -128,7 +128,12 @@ class Cli
 
     private function resolvePath(string $path, string $cwd): string
     {
-        return str_starts_with($path, '/') ? $path : $cwd . '/' . $path;
+        return $this->isAbsolutePath($path) ? $path : $cwd . '/' . $path;
+    }
+
+    private function isAbsolutePath(string $path): bool
+    {
+        return str_starts_with($path, '/') || (bool) preg_match('#^[A-Za-z]:[/\\\\]#', $path);
     }
 
     private function resolveTaskFile(string $cwd): string|null
