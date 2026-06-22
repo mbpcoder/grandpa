@@ -101,10 +101,8 @@ used throughout the rest of this README.
    > [!WARNING]
    > Never commit `.env` — it holds your FTP, SSH, and Telegram credentials.
 
-3. Copy `deploy.php.example` to `deploy.php` (or `runner.php.example` to `runner.php`)
-   in your project root and adjust it to your needs. `runner.php` is the more general
-   name to use once you also have scheduled tasks; if both files exist, `runner.php`
-   takes priority.
+3. Copy `runner.php.example` to `runner.php` in your project root and adjust it
+   to your needs.
 
    Alternatively, generate a `runner.php` automatically:
 
