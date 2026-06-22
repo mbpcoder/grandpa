@@ -27,12 +27,15 @@ them from the CLI or via Composer.
    - `DEPLOY_SSH_HOST` is only used for running post-deploy commands over SSH (FTP can't run commands).
    - Optionally require `vlucas/phpdotenv` (`composer require vlucas/phpdotenv`) for fuller `.env` parsing; Grandpa falls back to a built-in parser if it's not installed.
 
-3. Copy `deploy.php.example` to `deploy.php` in your project root and adjust it to your needs.
+3. Copy `deploy.php.example` to `deploy.php` (or `runner.php.example` to `runner.php`)
+   in your project root and adjust it to your needs. `runner.php` is the more general
+   name to use once you also have scheduled tasks; if both files exist, `runner.php`
+   takes priority.
 
 ### Writing tasks
 
-`deploy.php` is plain PHP. Register tasks with `task()` and use the helper
-functions below inside the task callback:
+`runner.php` (or `deploy.php`) is plain PHP. Register tasks with `task()` and use
+the helper functions below inside the task callback:
 
 ```php
 <?php
@@ -77,4 +80,44 @@ or, since a Composer script is wired up:
 composer deploy
 ```
 
-Both run the `deploy` task defined in the `deploy.php` file found in the current working directory.
+Both run the `deploy` task defined in the `runner.php`/`deploy.php` file found in the
+current working directory.
+
+### Scheduling tasks
+
+`task()` returns the `Task` instance, so you can chain Laravel-style schedule helpers
+onto it. Scheduled tasks aren't run when invoked by name — they're run by the
+`schedule:run` command, which checks every registered task and runs the ones that are
+due:
+
+```php
+<?php
+
+task('deploy', function () {
+    // ...
+})->everyMinute();
+
+task('clear-old-logs', function () {
+    // ...
+})->dailyAt('1:00');
+```
+
+Available schedule helpers: `everyMinute()`, `everyTwoMinutes()`, `everyFiveMinutes()`,
+`everyTenMinutes()`, `everyFifteenMinutes()`, `everyThirtyMinutes()`, `hourly()`,
+`hourlyAt(int $minute)`, `daily()`, `dailyAt(string $time)`, `weekly()`,
+`weeklyOn(int $dayOfWeek, string $time)`, `monthly()`,
+`monthlyOn(int $dayOfMonth, string $time)`, `yearly()`, or a raw `cron(string $expression)`
+for anything custom (standard 5-field cron syntax).
+
+Run the scheduler once via:
+
+```
+php bin/grandpa schedule:run
+```
+
+or `composer schedule`. Like Laravel, point a single cron entry at this command and
+let it run every minute on the server; Grandpa figures out which tasks are due:
+
+```
+* * * * * cd /path/to/project && php bin/grandpa schedule:run >> /dev/null 2>&1
+```

@@ -22,9 +22,9 @@ class Grandpa
         return self::$instance ??= new self();
     }
 
-    public function task(string $name, \Closure $callback): void
+    public function task(string $name, \Closure $callback): Task
     {
-        $this->tasks[$name] = new Task($name, $callback);
+        return $this->tasks[$name] = new Task($name, $callback);
     }
 
     public function runTask(string $name): void
@@ -34,6 +34,16 @@ class Grandpa
         }
 
         $this->tasks[$name]->run();
+    }
+
+    public function runDueTasks(\DateTimeInterface|null $time = null): void
+    {
+        foreach ($this->tasks as $task) {
+            if ($task->isDue($time)) {
+                $this->say("Running scheduled task \"{$task->getName()}\"");
+                $task->run();
+            }
+        }
     }
 
     public function ftp(): Storage

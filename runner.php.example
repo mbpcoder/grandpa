@@ -1,0 +1,24 @@
+<?php
+
+declare(strict_types=1);
+
+task('deploy', function () {
+    $files = git()->changedFiles();
+
+    ftp()->upload($files);
+    ftp()->delete(git()->deletedFiles());
+
+    git()->saveRevision();
+
+    say('Deployed');
+});
+
+// Runs every minute when triggered via `php bin/grandpa schedule:run`
+// (typically from a single cron entry, like Laravel's scheduler).
+task('clear-cache', function () {
+    ssh()->run('cd /var/www/app && php artisan cache:clear');
+})->everyFiveMinutes();
+
+task('heartbeat', function () {
+    say('Still alive at ' . date('Y-m-d H:i:s'));
+})->everyMinute();
