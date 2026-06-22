@@ -1,4 +1,4 @@
-# Grandpa — a Pure PHP Deploy & Task Scheduler
+# 👴 Grandpa — a Pure PHP Deploy & Task Scheduler
 
 Grandpa is a lightweight, dependency-light PHP build, deploy, and task
 scheduling tool for PHP projects. Think of it as a minimal alternative to
@@ -8,18 +8,18 @@ from the command line, via Composer scripts, or on a cron schedule.
 
 Use Grandpa to:
 
-- **Deploy over FTP/FTPS** to shared hosting (cPanel, DirectAdmin) that has
+- 📤 **Deploy over FTP/FTPS** to shared hosting (cPanel, DirectAdmin) that has
   no SSH access, uploading only the files that changed since the last deploy.
-- **Deploy to a VPS over SSH**, running `composer install`, `artisan migrate`,
+- 🔐 **Deploy to a VPS over SSH**, running `composer install`, `artisan migrate`,
   cache warm-ups, or any other post-deploy command.
-- **Schedule recurring PHP tasks** (cache clearing, cleanup jobs, health
+- ⏰ **Schedule recurring PHP tasks** (cache clearing, cleanup jobs, health
   checks) with a Laravel-style fluent API (`->daily()`, `->everyMinute()`,
   `->cron('* * * * *')`) driven by a single cron entry.
-- **Scaffold a deploy script automatically** for Vite/Webpack/Laravel Mix/
+- ⚡ **Scaffold a deploy script automatically** for Vite/Webpack/Laravel Mix/
   Next.js/Angular/Vue projects with `grandpa init`.
-- **Send Telegram notifications** from a task, e.g. to report deploy status.
+- 💬 **Send Telegram notifications** from a task, e.g. to report deploy status.
 
-## Table of contents
+## 📋 Table of contents
 
 - [Installation](#installation)
 - [Setup](#setup)
@@ -29,7 +29,7 @@ Use Grandpa to:
 - [Recipes](#recipes)
 - [Scheduling tasks](#scheduling-tasks)
 
-## Installation
+## 📦 Installation
 
 Install Grandpa as a dev dependency in any PHP 8.1+ project with Composer:
 
@@ -68,7 +68,7 @@ composer install
 and run the binary straight out of the repo with `php bin/grandpa ...`, as
 used throughout the rest of this README.
 
-## Deploy
+## 🚀 Deploy
 
 ### Setup
 
@@ -223,7 +223,7 @@ schedule is currently due (tasks with an unmet schedule are skipped silently):
 php bin/grandpa runner.php
 ```
 
-## CLI reference
+## ⌨️ CLI reference
 
 | Command | What it does |
 | --- | --- |
@@ -253,7 +253,7 @@ php bin/grandpa deploy --dir=/path/to/some-other-project
 php bin/grandpa --dir=../another-project deploy --force
 ```
 
-### Recipes
+### 🍳 Recipes
 
 A few common deploy scenarios, ready to copy into `deploy.php`/`runner.php`.
 
@@ -388,7 +388,7 @@ task('git:update-all', function () {
 (e.g. filtering by branch name, or only reporting repos with changes)
 instead of a single fixed command.
 
-## Scheduling tasks
+## ⏰ Scheduling tasks
 
 `task()` returns the `Task` instance, so you can chain Laravel-style schedule helpers
 onto it. Scheduled tasks invoked by name (`grandpa <task>`) only run when their
