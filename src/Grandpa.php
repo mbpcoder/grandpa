@@ -1,11 +1,50 @@
 <?php
 
-namespace Grandpa;
+declare(strict_types=1);
 
+namespace Grandpa;
 
 class Grandpa
 {
+    private static self|null $instance = null;
+
+    /** @var array<string, Task> */
+    private array $tasks = [];
+
+    private Git|null $git = null;
+    private Storage|null $storage = null;
+    private Ssh|null $ssh = null;
+
     private $sass;
+
+    public static function instance(): self
+    {
+        return self::$instance ??= new self();
+    }
+
+    public function task(string $name, \Closure $callback): void
+    {
+        $this->tasks[$name] = new Task($name, $callback);
+    }
+
+    public function runTask(string $name): void
+    {
+        if (!isset($this->tasks[$name])) {
+            throw new \RuntimeException("Task \"{$name}\" is not defined.");
+        }
+
+        $this->tasks[$name]->run();
+    }
+
+    public function ftp(): Storage
+    {
+        return $this->storage ??= Storage::fromEnv();
+    }
+
+    public function ssh(): Ssh
+    {
+        return $this->ssh ??= Ssh::fromEnv();
+    }
 
     public function css()
     {
@@ -44,11 +83,6 @@ class Grandpa
         return $this;
     }
 
-    public function deploy()
-    {
-        return $this;
-    }
-
     public function test()
     {
         return $this;
@@ -59,20 +93,14 @@ class Grandpa
         return $this;
     }
 
-    public function run()
+    public function say(string $message): void
     {
-        return $this;
+        echo $message . PHP_EOL;
     }
 
-    public function say()
+    public function git(): Git
     {
-        return $this;
-    }
-
-    public function git()
-    {
-        $git = new Git();
-        return $git;
+        return $this->git ??= new Git($this->ftp());
     }
 }
 
@@ -90,16 +118,14 @@ class Grandpa
 //
 //$grandpa->move();
 //$grandpa->copy();
-//$grandpa->deploy();
 //$grandpa->test();
 //$grandpa->clean();
 //
-//// git operations
-//$grandpa->git()->push();
-//$grandpa->git()->pull();
-//
-//// print a message for user
-//$grandpa->say();
-//
-//// run the chane
-//$grandpa->run();
+//// deploy via the task system, see deploy.php.example
+//task('deploy', function () {
+//    $files = git()->changedFiles();
+//    ftp()->upload($files);
+//    ftp()->delete(git()->deletedFiles());
+//    git()->saveRevision();
+//    say('Deployed');
+//});
