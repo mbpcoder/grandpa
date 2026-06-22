@@ -3,4 +3,7 @@ composer.phar
 /vendor/
 
 ### Environment ###
-.env.phpunit.result.cache
+.env
+
+### PHPUnit ###
+.phpunit.result.cache
