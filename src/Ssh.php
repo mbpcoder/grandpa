@@ -36,7 +36,7 @@ class Ssh
 
         $args = [];
 
-        if ($this->password !== '') {
+        if ($this->password !== '' && \PHP_OS_FAMILY !== 'Windows') {
             $args[] = 'sshpass';
             $args[] = '-p';
             $args[] = escapeshellarg($this->password);
