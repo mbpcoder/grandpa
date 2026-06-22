@@ -1,15 +1,77 @@
-# Grandpa
-Grandpa Build System is a Pure PHP Build system.
+# Grandpa — a Pure PHP Deploy & Task Scheduler
+
+Grandpa is a lightweight, dependency-light PHP build, deploy, and task
+scheduling tool for PHP projects. Think of it as a minimal alternative to
+[Deployer](https://deployer.org/) or [Envoy](https://laravel.com/docs/envoy):
+describe deploy and maintenance tasks once in a plain PHP file, then run them
+from the command line, via Composer scripts, or on a cron schedule.
+
+Use Grandpa to:
+
+- **Deploy over FTP/FTPS** to shared hosting (cPanel, DirectAdmin) that has
+  no SSH access, uploading only the files that changed since the last deploy.
+- **Deploy to a VPS over SSH**, running `composer install`, `artisan migrate`,
+  cache warm-ups, or any other post-deploy command.
+- **Schedule recurring PHP tasks** (cache clearing, cleanup jobs, health
+  checks) with a Laravel-style fluent API (`->daily()`, `->everyMinute()`,
+  `->cron('* * * * *')`) driven by a single cron entry.
+- **Scaffold a deploy script automatically** for Vite/Webpack/Laravel Mix/
+  Next.js/Angular/Vue projects with `grandpa init`.
+
+## Table of contents
+
+- [Installation](#installation)
+- [Setup](#setup)
+- [Writing tasks](#writing-tasks)
+- [Running a deploy](#running-a-deploy)
+- [CLI reference](#cli-reference)
+- [Recipes](#recipes)
+- [Scheduling tasks](#scheduling-tasks)
+
+## Installation
+
+Install Grandpa as a dev dependency in any PHP 8.1+ project with Composer:
+
+```
+composer require --dev mbpcoder/grandpa
+```
+
+This adds the `grandpa` binary to `vendor/bin/grandpa`, so you can run it as:
+
+```
+php vendor/bin/grandpa deploy
+```
+
+### Optional: a global `grandpa` command
+
+To call `grandpa` directly (without `php` or a path prefix), install it
+globally instead:
+
+```
+composer global require mbpcoder/grandpa
+```
+
+Make sure Composer's global `vendor/bin` directory (run `composer global
+config bin-dir --absolute` to find it) is on your shell's `PATH`. Once it is,
+every command in this README also works as plain `grandpa ...` instead of
+`php bin/grandpa ...`.
+
+### Working on this repository directly
+
+If you're hacking on Grandpa itself (this repo), install dependencies with:
+
+```
+composer install
+```
+
+and run the binary straight out of the repo with `php bin/grandpa ...`, as
+used throughout the rest of this README.
 
 ## Deploy
 
-Grandpa ships a minimal, dependency-light deploy tool (similar in spirit to
-Envoy/Deployer): you describe deploy tasks in a `deploy.php` file, then run
-them from the CLI or via Composer.
-
 ### Setup
 
-1. Install dependencies: `composer install`.
+1. Install Grandpa (see [Installation](#installation) above).
 2. Copy `.env.example` to `.env` and fill in your credentials. **Never commit `.env`.**
 
    ```
@@ -114,6 +176,54 @@ composer deploy
 Both run the `deploy` task defined in the `runner.php`/`deploy.php` file found in the
 current working directory.
 
+If a task has a schedule attached (e.g. `->daily()`), running it by name only
+runs it when the schedule is currently due; otherwise grandpa prints a message
+instead of running it:
+
+```
+$ php bin/grandpa deploy
+Schedule for task "deploy" hasn't been met yet. Use --force/-f to run it anyway.
+```
+
+Pass `--force` or `-f` to run it regardless of its schedule:
+
+```
+php bin/grandpa deploy --force
+```
+
+Tasks with no schedule always run immediately.
+
+You can also point at a task file explicitly, similar to how PHPUnit takes a test
+file:
+
+```
+php bin/grandpa runner.php deploy
+php bin/grandpa --file=runner.php deploy
+```
+
+Running it without a task name runs every task that has no schedule, or whose
+schedule is currently due (tasks with an unmet schedule are skipped silently):
+
+```
+php bin/grandpa runner.php
+```
+
+## CLI reference
+
+| Command | What it does |
+| --- | --- |
+| `grandpa init` | Generate a `runner.php` for the current project by detecting `composer.json`/`package.json`/`.git` and the JS build tool in use. |
+| `grandpa init -i` / `grandpa init --interactive` | Same as `init`, plus prompts for FTP/SSH credentials and writes them to `.env`. |
+| `grandpa <task>` | Run `<task>` from the auto-discovered `runner.php` (or `deploy.php`) in the current directory. Skips the task with a message if it has an unmet schedule. |
+| `grandpa <task> --force` / `grandpa <task> -f` | Run `<task>` immediately, ignoring its schedule. |
+| `grandpa <file.php>` | Run every eligible task (no schedule, or schedule currently due) from `<file.php>` instead of auto-discovering it. |
+| `grandpa <file.php> <task>` | Run `<task>` from `<file.php>` instead of the auto-discovered file. |
+| `grandpa --file=<file.php> [task]` | Same as the positional file argument above; useful when `<file.php>` doesn't look like a path Grandpa would auto-detect. |
+| `grandpa schedule:run` | Run every task whose schedule is currently due. Intended to be triggered once a minute by a single cron entry. |
+
+Flags can be combined, e.g. `grandpa --file=runner.php deploy --force` runs
+the `deploy` task from `runner.php` even if its schedule isn't due yet.
+
 ### Recipes
 
 A few common deploy scenarios, ready to copy into `deploy.php`/`runner.php`.
@@ -193,9 +303,10 @@ works without a prompt before running `grandpa deploy`.
 ### Scheduling tasks
 
 `task()` returns the `Task` instance, so you can chain Laravel-style schedule helpers
-onto it. Scheduled tasks aren't run when invoked by name — they're run by the
-`schedule:run` command, which checks every registered task and runs the ones that are
-due:
+onto it. Scheduled tasks invoked by name (`grandpa <task>`) only run when their
+schedule is currently due — pass `--force`/`-f` to run them anyway. The
+`schedule:run` command checks every registered task and runs the ones that are
+due, which is what you want behind a single cron entry:
 
 ```php
 <?php

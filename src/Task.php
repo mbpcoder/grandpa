@@ -31,6 +31,11 @@ class Task implements ITask
         return $this;
     }
 
+    public function hasSchedule(): bool
+    {
+        return $this->cronExpression !== null;
+    }
+
     public function isDue(\DateTimeInterface|null $time = null): bool
     {
         if ($this->cronExpression === null) {
