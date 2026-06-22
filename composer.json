@@ -29,6 +29,10 @@
   ],
   "scripts": {
     "deploy": "php bin/grandpa deploy",
-    "schedule": "php bin/grandpa schedule:run"
+    "schedule": "php bin/grandpa schedule:run",
+    "test": "phpunit"
+  },
+  "require-dev": {
+    "phpunit/phpunit": "^10"
   }
 }
