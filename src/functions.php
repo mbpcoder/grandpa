@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Grandpa\Env;
 use Grandpa\Git;
 use Grandpa\Grandpa;
+use Grandpa\Http;
 use Grandpa\Ssh;
 use Grandpa\Storage;
 use Grandpa\Task;
@@ -34,6 +35,13 @@ if (!function_exists('ssh')) {
     function ssh(): Ssh
     {
         return Grandpa::instance()->ssh();
+    }
+}
+
+if (!function_exists('http')) {
+    function http(): Http
+    {
+        return Grandpa::instance()->http();
     }
 }
 

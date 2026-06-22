@@ -66,7 +66,13 @@ How the incremental upload works:
   (`git ls-files`) is uploaded.
 - `git()->saveRevision()` writes the current `HEAD` hash back to the remote `.revision` file.
 
-Available helpers: `task()`, `git()`, `ftp()`, `ssh()`, `say()`, `env()`.
+Available helpers: `task()`, `git()`, `ftp()`, `ssh()`, `http()`, `say()`, `env()`.
+
+`http()` returns a small Guzzle-backed client for hitting URLs during a
+deploy (e.g. cache-clear/health-check routes): `http()->get($url)`,
+`http()->post($url, ['json' => [...]])`, or `http()->request($method, $url, $options)`.
+The `$options` array is passed straight through to Guzzle, so any Guzzle
+request option works. Requests that fail throw a `RuntimeException`.
 
 ### Running a deploy
 
@@ -105,13 +111,7 @@ task('deploy', function () {
     git()->saveRevision();
 
     // Hit a route on the live site to clear cache / warm up / health-check.
-    $response = file_get_contents('https://example.com/__deploy/clear-cache', false, stream_context_create([
-        'http' => ['timeout' => 15],
-    ]));
-
-    if ($response === false) {
-        throw new \RuntimeException('Cache clear request failed.');
-    }
+    $response = http()->get('https://example.com/__deploy/clear-cache');
 
     say('Deployed and cache cleared: ' . $response);
 });
