@@ -32,6 +32,27 @@ them from the CLI or via Composer.
    name to use once you also have scheduled tasks; if both files exist, `runner.php`
    takes priority.
 
+   Alternatively, generate a `runner.php` automatically:
+
+   ```
+   php bin/grandpa init
+   ```
+
+   `init` looks at the current directory for `composer.json`, `package.json`, and a
+   `.git` folder to figure out what kind of project it is, picks up the build tool
+   from `package.json` dependencies (Vite, Webpack, Laravel Mix, Create React App,
+   Next.js, Angular CLI, Vue CLI), and writes a `runner.php` with a `deploy` task
+   tailored to what it found: a build step (`npm`/`yarn`/`pnpm run build`) if a
+   `build` script exists, incremental git-based upload if it's a git repo, and
+   `ftp()->purge()`/`uploadDir()` of the detected build output folder.
+
+   Pass `-i` or `--interactive` to also be prompted for FTP/SSH credentials, which
+   get written to `.env` (an existing `.env` is left untouched):
+
+   ```
+   php bin/grandpa init -i
+   ```
+
 ### Writing tasks
 
 `runner.php` (or `deploy.php`) is plain PHP. Register tasks with `task()` and use

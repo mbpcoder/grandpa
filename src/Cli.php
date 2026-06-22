@@ -11,11 +11,18 @@ class Cli
         $command = $argv[1] ?? null;
 
         if ($command === null) {
-            fwrite(STDERR, "Usage: grandpa <task>|schedule:run\n");
+            fwrite(STDERR, "Usage: grandpa <task>|schedule:run|init\n");
             exit(1);
         }
 
         $cwd = (string) getcwd();
+
+        if ($command === 'init') {
+            (new Init())->run($cwd, $argv);
+
+            return;
+        }
+
         Env::load($cwd . '/.env');
 
         $taskFile = $this->resolveTaskFile($cwd);
