@@ -66,3 +66,25 @@ if (!function_exists('env')) {
         return Env::get($key, $default);
     }
 }
+
+if (!function_exists('subDirectories')) {
+    /**
+     * One level of subdirectories of a local path, as absolute paths.
+     *
+     * @return list<string>
+     */
+    function subDirectories(string $path): array
+    {
+        $entries = array_diff(scandir($path) ?: [], ['.', '..']);
+
+        $directories = array_filter(
+            $entries,
+            static fn (string $entry): bool => is_dir($path . '/' . $entry),
+        );
+
+        return array_values(array_map(
+            static fn (string $entry): string => rtrim($path, '/') . '/' . $entry,
+            $directories,
+        ));
+    }
+}

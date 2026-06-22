@@ -22,3 +22,20 @@ task('clear-cache', function () {
 task('heartbeat', function () {
     say('Still alive at ' . date('Y-m-d H:i:s'));
 })->everyMinute();
+
+// Walk one level of subdirectories under a base path, and `git pull` every
+// one that is a git repository, reporting the branch and changed files.
+task('git:update-all', function () {
+    foreach (subDirectories('/var/www/projects') as $dir) {
+        if (!git()->isRepository($dir)) {
+            continue;
+        }
+
+        say($dir);
+        say('  branch: ' . git()->currentBranch($dir));
+
+        foreach (git()->pull($dir) as $line) {
+            say('  ' . $line);
+        }
+    }
+});
