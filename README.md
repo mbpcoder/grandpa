@@ -516,12 +516,15 @@ task('clear-old-logs', function () {
 })->dailyAt('1:00');
 ```
 
-Available schedule helpers: `everyMinute()`, `everyTwoMinutes()`, `everyFiveMinutes()`,
+Available schedule helpers: `everySecond()`, `everySeconds(int $seconds)`,
+`everyFiveSeconds()`, `everyTenSeconds()`, `everyFifteenSeconds()`, `everyThirtySeconds()`,
+`everyMinute()`, `everyTwoMinutes()`, `everyFiveMinutes()`,
 `everyTenMinutes()`, `everyFifteenMinutes()`, `everyThirtyMinutes()`, `hourly()`,
 `hourlyAt(int $minute)`, `daily()`, `dailyAt(string $time)`, `weekly()`,
 `weeklyOn(int $dayOfWeek, string $time)`, `monthly()`,
 `monthlyOn(int $dayOfMonth, string $time)`, `yearly()`, or a raw `cron(string $expression)`
-for anything custom (standard 5-field cron syntax).
+for anything custom — standard 5-field cron syntax, or a 6-field expression with a
+leading seconds field (e.g. `cron('*/10 * * * * *')`) for sub-minute schedules.
 
 Run the scheduler once via:
 
@@ -535,3 +538,15 @@ let it run every minute on the server; Grandpa figures out which tasks are due:
 ```
 * * * * * cd /path/to/project && php bin/grandpa schedule:run >> /dev/null 2>&1
 ```
+
+If you need sub-minute schedules (`everySecond()`, `everySeconds(10)`, etc.), cron
+can't trigger those on its own since it has minute resolution. Instead, run:
+
+```
+php bin/grandpa watch
+```
+
+This checks every task once a second and keeps running — checking and running due
+tasks — until you stop it (e.g. Ctrl+C). Use `--interval=<seconds>` to change how
+often it checks (default `1`). Run it under a process manager (systemd, supervisor,
+pm2, etc.) so it stays up and restarts if it crashes.

@@ -69,9 +69,9 @@ class Grandpa
     }
 
     /**
-     * Checks every task once: runs cron tasks that are newly due and watch()
-     * tasks whose folder changed since the last tick. Exceptions from a
-     * single task are caught and reported so they don't kill the loop.
+     * Checks every task once and runs the ones that are newly due.
+     * Exceptions from a single task are caught and reported so they don't
+     * kill the loop.
      */
     public function tick(\DateTimeInterface|null $time = null): void
     {
@@ -79,9 +79,6 @@ class Grandpa
             try {
                 if ($task->hasSchedule() && $task->isDueOnce($time)) {
                     $this->say("Running scheduled task \"{$task->getName()}\"");
-                    $task->run();
-                } elseif ($task->hasWatch() && $task->watchChanged()) {
-                    $this->say("Change detected in \"{$task->getWatchPath()}\", running task \"{$task->getName()}\"");
                     $task->run();
                 }
             } catch (\Throwable $exception) {
@@ -92,7 +89,8 @@ class Grandpa
 
     /**
      * Runs tick() in a loop until the process is killed (e.g. Ctrl+C), so
-     * scheduled and watch() tasks keep getting checked indefinitely.
+     * scheduled tasks (including sub-minute ones via a 6-field cron
+     * expression) keep getting checked indefinitely.
      */
     public function watchLoop(int $intervalSeconds = 1): void
     {

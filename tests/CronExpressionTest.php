@@ -65,4 +65,21 @@ final class CronExpressionTest extends TestCase
 
         (new CronExpression('* * *'))->isDue(new \DateTimeImmutable());
     }
+
+    public function testSixFieldExpressionMatchesSeconds(): void
+    {
+        $cron = new CronExpression('*/10 * * * * *');
+
+        self::assertTrue($cron->isDue(new \DateTimeImmutable('2024-01-01 12:34:00')));
+        self::assertTrue($cron->isDue(new \DateTimeImmutable('2024-01-01 12:34:10')));
+        self::assertFalse($cron->isDue(new \DateTimeImmutable('2024-01-01 12:34:05')));
+    }
+
+    public function testSixFieldExpressionStillRespectsMinuteField(): void
+    {
+        $cron = new CronExpression('* */2 * * * *');
+
+        self::assertTrue($cron->isDue(new \DateTimeImmutable('2024-01-01 12:34:00')));
+        self::assertFalse($cron->isDue(new \DateTimeImmutable('2024-01-01 12:35:00')));
+    }
 }

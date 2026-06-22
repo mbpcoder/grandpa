@@ -15,11 +15,17 @@ class CronExpression
     {
         $fields = preg_split('/\s+/', trim($this->expression));
 
-        if (count($fields) !== 5) {
+        if (count($fields) === 6) {
+            [$second, $minute, $hour, $day, $month, $weekday] = $fields;
+
+            if (!$this->matches($second, (int) $time->format('s'))) {
+                return false;
+            }
+        } elseif (count($fields) === 5) {
+            [$minute, $hour, $day, $month, $weekday] = $fields;
+        } else {
             throw new \InvalidArgumentException("Invalid cron expression \"{$this->expression}\".");
         }
-
-        [$minute, $hour, $day, $month, $weekday] = $fields;
 
         return $this->matches($minute, (int) $time->format('i'))
             && $this->matches($hour, (int) $time->format('G'))

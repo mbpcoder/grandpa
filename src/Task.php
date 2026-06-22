@@ -9,12 +9,6 @@ class Task implements ITask
     private string|null $cronExpression = null;
     private string|null $lastDueKey = null;
 
-    private string|null $watchPath = null;
-    /** @var list<string> */
-    private array $watchExtensions = [];
-    private string|null $watchSignature = null;
-    private bool $watchInitialized = false;
-
     public function __construct(
         private readonly string $name,
         private readonly \Closure $callback,
@@ -31,6 +25,11 @@ class Task implements ITask
         ($this->callback)();
     }
 
+    /**
+     * Accepts a standard 5-field cron expression (minute resolution), or a
+     * 6-field expression with a leading seconds field for sub-minute
+     * scheduling, e.g. cron('*\/10 * * * * *') to run every 10 seconds.
+     */
     public function cron(string $expression): static
     {
         $this->cronExpression = $expression;
@@ -53,18 +52,20 @@ class Task implements ITask
     }
 
     /**
-     * Like isDue(), but only returns true once per matching minute, so a
-     * long-running watch loop ticking faster than once a minute doesn't
-     * re-trigger the task repeatedly while it remains due.
+     * Like isDue(), but only returns true once per matching second (for
+     * 6-field expressions) or minute (for 5-field expressions), so a loop
+     * ticking faster than the schedule's resolution doesn't re-trigger the
+     * task repeatedly while it remains due.
      */
     public function isDueOnce(\DateTimeInterface|null $time = null): bool
     {
-        if (!$this->hasSchedule()) {
+        if ($this->cronExpression === null) {
             return false;
         }
 
         $time ??= new \DateTimeImmutable();
-        $key = $time->format('Y-m-d H:i');
+        $hasSecondsField = count(preg_split('/\s+/', trim($this->cronExpression))) === 6;
+        $key = $time->format($hasSecondsField ? 'Y-m-d H:i:s' : 'Y-m-d H:i');
 
         if ($key === $this->lastDueKey || !$this->isDue($time)) {
             return false;
@@ -75,84 +76,34 @@ class Task implements ITask
         return true;
     }
 
-    /**
-     * @param list<string> $extensions File extensions (without the dot) to watch; empty means all files.
-     */
-    public function watch(string $path, array $extensions = []): static
+    public function everySecond(): static
     {
-        $this->watchPath = $path;
-        $this->watchExtensions = array_map(fn (string $extension) => strtolower($extension), $extensions);
-
-        return $this;
+        return $this->cron('* * * * * *');
     }
 
-    public function hasWatch(): bool
+    public function everySeconds(int $seconds): static
     {
-        return $this->watchPath !== null;
+        return $this->cron("*/{$seconds} * * * * *");
     }
 
-    public function getWatchPath(): string|null
+    public function everyFiveSeconds(): static
     {
-        return $this->watchPath;
+        return $this->everySeconds(5);
     }
 
-    /**
-     * Returns true the first time it detects the watched folder differs
-     * from its previously recorded state. The first call after watch() is
-     * configured only records a baseline and returns false, so the task
-     * doesn't run immediately on startup.
-     */
-    public function watchChanged(): bool
+    public function everyTenSeconds(): static
     {
-        if ($this->watchPath === null) {
-            return false;
-        }
-
-        $signature = $this->computeWatchSignature();
-
-        if (!$this->watchInitialized) {
-            $this->watchSignature = $signature;
-            $this->watchInitialized = true;
-
-            return false;
-        }
-
-        if ($signature === $this->watchSignature) {
-            return false;
-        }
-
-        $this->watchSignature = $signature;
-
-        return true;
+        return $this->everySeconds(10);
     }
 
-    private function computeWatchSignature(): string
+    public function everyFifteenSeconds(): static
     {
-        if ($this->watchPath === null || !is_dir($this->watchPath)) {
-            return '';
-        }
+        return $this->everySeconds(15);
+    }
 
-        $entries = [];
-
-        $iterator = new \RecursiveIteratorIterator(
-            new \RecursiveDirectoryIterator($this->watchPath, \FilesystemIterator::SKIP_DOTS)
-        );
-
-        foreach ($iterator as $file) {
-            if (!$file->isFile()) {
-                continue;
-            }
-
-            if ($this->watchExtensions !== [] && !in_array(strtolower($file->getExtension()), $this->watchExtensions, true)) {
-                continue;
-            }
-
-            $entries[] = $file->getPathname() . ':' . $file->getMTime() . ':' . $file->getSize();
-        }
-
-        sort($entries);
-
-        return hash('xxh128', implode('|', $entries));
+    public function everyThirtySeconds(): static
+    {
+        return $this->everySeconds(30);
     }
 
     public function everyMinute(): static

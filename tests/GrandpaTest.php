@@ -70,45 +70,34 @@ final class GrandpaTest extends TestCase
         $this->expectOutputString('hello' . PHP_EOL);
     }
 
-    public function testTickRunsDueCronTaskOnceAndWatchTaskOnChange(): void
+    public function testTickRunsDueCronTaskOnlyOncePerResolution(): void
     {
-        $dir = sys_get_temp_dir() . '/grandpa-tick-test-' . uniqid();
-        mkdir($dir);
-        file_put_contents($dir . '/a.txt', 'one');
+        $minuteRuns = 0;
+        $secondRuns = 0;
 
-        try {
-            $cronRuns = 0;
-            $watchRuns = 0;
+        Grandpa::instance()->task('minutely', function () use (&$minuteRuns): void {
+            $minuteRuns++;
+        })->everyMinute();
 
-            Grandpa::instance()->task('cron', function () use (&$cronRuns): void {
-                $cronRuns++;
-            })->everyMinute();
+        Grandpa::instance()->task('secondly', function () use (&$secondRuns): void {
+            $secondRuns++;
+        })->everySecond();
 
-            Grandpa::instance()->task('watcher', function () use (&$watchRuns): void {
-                $watchRuns++;
-            })->watch($dir);
+        $time = new \DateTimeImmutable('2024-06-15 12:00:00');
 
-            $time = new \DateTimeImmutable('2024-06-15 12:00:00');
+        Grandpa::instance()->tick($time);
+        self::assertSame(1, $minuteRuns);
+        self::assertSame(1, $secondRuns);
 
-            Grandpa::instance()->tick($time);
-            self::assertSame(1, $cronRuns);
-            self::assertSame(0, $watchRuns);
+        // Same second: neither task should re-run.
+        Grandpa::instance()->tick($time);
+        self::assertSame(1, $minuteRuns);
+        self::assertSame(1, $secondRuns);
 
-            // Same minute: cron task must not re-run, watch baseline already recorded.
-            Grandpa::instance()->tick($time);
-            self::assertSame(1, $cronRuns);
-            self::assertSame(0, $watchRuns);
-
-            sleep(1);
-            file_put_contents($dir . '/a.txt', 'two');
-
-            Grandpa::instance()->tick($time);
-            self::assertSame(1, $cronRuns);
-            self::assertSame(1, $watchRuns);
-        } finally {
-            @unlink($dir . '/a.txt');
-            @rmdir($dir);
-        }
+        // A second later: the per-second task fires again, the per-minute task doesn't.
+        Grandpa::instance()->tick($time->modify('+1 second'));
+        self::assertSame(1, $minuteRuns);
+        self::assertSame(2, $secondRuns);
     }
 
     public function testTickCatchesExceptionsFromOneTaskAndContinues(): void
