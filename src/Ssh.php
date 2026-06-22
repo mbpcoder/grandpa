@@ -36,13 +36,27 @@ class Ssh
 
         $target = $this->username !== '' ? "{$this->username}@{$this->host}" : $this->host;
 
-        $fullCommand = implode(' ', $this->buildArgs($target, $command));
+        $usePlink = $this->password !== '' && \PHP_OS_FAMILY === 'Windows' && $this->plinkPath !== '';
+
+        $fullCommand = implode(' ', $this->buildArgs($target, $command, $usePlink));
 
         $output = [];
         exec($fullCommand . ' 2>&1', $output, $exitCode);
         $result = implode("\n", $output);
 
         if ($exitCode !== 0) {
+            if ($usePlink && stripos($result, 'host key is not cached') !== false) {
+                $trustCommand = "{$this->plinkPath} -ssh {$target}";
+
+                throw new \RuntimeException(
+                    "SSH command failed: {$command}\n{$result}\n\n"
+                    . "WARNING: plink refused to connect because it does not yet trust this host's SSH key "
+                    . "(this is a security check to prevent connecting to an impostor server).\n"
+                    . "Run this command manually once and answer \"y\" to cache the host key, then re-run grandpa:\n"
+                    . "  {$trustCommand}"
+                );
+            }
+
             throw new \RuntimeException("SSH command failed: {$command}\n{$result}");
         }
 
@@ -53,10 +67,8 @@ class Ssh
         return $result;
     }
 
-    private function buildArgs(string $target, string $command): array
+    private function buildArgs(string $target, string $command, bool $usePlink): array
     {
-        $usePlink = $this->password !== '' && \PHP_OS_FAMILY === 'Windows' && $this->plinkPath !== '';
-
         if ($usePlink) {
             $args = [
                 escapeshellarg($this->plinkPath),
