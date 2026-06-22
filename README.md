@@ -33,7 +33,7 @@ Use Grandpa to:
 Install Grandpa as a dev dependency in any PHP 8.1+ project with Composer:
 
 ```
-composer require --dev bagheri/grandpa
+composer require --dev mbpcoder/grandpa
 ```
 
 This adds the `grandpa` binary to `vendor/bin/grandpa`, so you can run it as:
@@ -48,7 +48,7 @@ To call `grandpa` directly (without `php` or a path prefix), install it
 globally instead:
 
 ```
-composer global require bagheri/grandpa
+composer global require mbpcoder/grandpa
 ```
 
 Make sure Composer's global `vendor/bin` directory (run `composer global
