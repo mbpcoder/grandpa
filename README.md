@@ -550,6 +550,26 @@ task('flaky-deploy', function () {
 `retry()` and `repeat()` can be combined: each of the `repeat()` runs gets its
 own full set of `retry()` attempts.
 
+### Running repeats in parallel
+
+Chain `->asParallel($maxConcurrent)` after `->repeat()` to run the repeats
+concurrently instead of one after another. Each repeat runs as its own `php`
+process (works the same on Linux, macOS, and Windows), capped at
+`$maxConcurrent` running at once — pass `0` (the default) to run them all at
+once:
+
+```php
+task('warm-caches', function () {
+    http()->get('https://example.com/cache-warm');
+})->repeat(10)->asParallel(5); // 10 runs total, 5 at a time
+```
+
+A `repeat($times, $intervalMs)` interval is ignored (with a warning) once
+`asParallel()` is added, since there's no "wait between runs" when they're
+firing concurrently. Failures are aggregated the same way as sequential
+`repeat()`: if any of the parallel runs fail, the task throws after all of
+them have finished, reporting how many failed.
+
 Run the scheduler once via:
 
 ```
