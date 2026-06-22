@@ -5,8 +5,8 @@ declare(strict_types=1);
 task('deploy', function () {
     $files = git()->changedFiles();
 
-    ftp()->upload($files);
-    ftp()->delete(git()->deletedFiles());
+    storage()->ftp()->upload($files);
+    storage()->ftp()->delete(git()->deletedFiles());
 
     git()->saveRevision();
 
