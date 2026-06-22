@@ -8,11 +8,14 @@ class Cli
 {
     public function run(array $argv): void
     {
-        $first = $argv[1] ?? null;
+        [$positional, $options] = $this->parseArguments(array_slice($argv, 1));
 
-        if ($first === null) {
-            fwrite(STDERR, "Usage: grandpa <task>|schedule:run|init\n");
-            fwrite(STDERR, "       grandpa <file.php> [task]\n");
+        $first = $positional[0] ?? null;
+
+        if ($first === null && !isset($options['file'])) {
+            fwrite(STDERR, "Usage: grandpa <task>|schedule:run|init [--force|-f]\n");
+            fwrite(STDERR, "       grandpa <file.php> [task] [--force|-f]\n");
+            fwrite(STDERR, "       grandpa --file=<file.php> [task] [--force|-f]\n");
             exit(1);
         }
 
@@ -24,13 +27,20 @@ class Cli
             return;
         }
 
-        $taskFile = $this->isTaskFileArgument($first, $cwd)
-            ? $this->resolvePath($first, $cwd)
-            : $this->resolveTaskFile($cwd);
+        $force = isset($options['force']);
 
-        $command = $this->isTaskFileArgument($first, $cwd) ? ($argv[2] ?? null) : $first;
+        if (isset($options['file'])) {
+            $taskFile = $this->resolvePath($options['file'], $cwd);
+            $command = $first;
+        } elseif ($first !== null && $this->isTaskFileArgument($first, $cwd)) {
+            $taskFile = $this->resolvePath($first, $cwd);
+            $command = $positional[1] ?? null;
+        } else {
+            $taskFile = $this->resolveTaskFile($cwd);
+            $command = $first;
+        }
 
-        if ($taskFile === null) {
+        if ($taskFile === null || !file_exists($taskFile)) {
             fwrite(STDERR, "No runner.php or deploy.php found in {$cwd}\n");
             exit(1);
         }
@@ -41,9 +51,7 @@ class Cli
 
         try {
             if ($command === null) {
-                foreach (Grandpa::instance()->getTaskNames() as $name) {
-                    echo $name . PHP_EOL;
-                }
+                Grandpa::instance()->runEligibleTasks();
 
                 return;
             }
@@ -54,11 +62,50 @@ class Cli
                 return;
             }
 
-            Grandpa::instance()->runTask($command);
+            $this->runNamedTask($command, $force);
         } catch (\Throwable $exception) {
             fwrite(STDERR, $exception->getMessage() . PHP_EOL);
             exit(1);
         }
+    }
+
+    private function runNamedTask(string $name, bool $force): void
+    {
+        $task = Grandpa::instance()->getTask($name);
+
+        if ($task === null) {
+            throw new \RuntimeException("Task \"{$name}\" is not defined.");
+        }
+
+        if (!$force && $task->hasSchedule() && !$task->isDue()) {
+            echo "Schedule for task \"{$name}\" hasn't been met yet. Use --force/-f to run it anyway." . PHP_EOL;
+
+            return;
+        }
+
+        $task->run();
+    }
+
+    /**
+     * @param list<string> $arguments
+     * @return array{0: list<string>, 1: array<string, string|true>}
+     */
+    private function parseArguments(array $arguments): array
+    {
+        $positional = [];
+        $options = [];
+
+        foreach ($arguments as $argument) {
+            if ($argument === '--force' || $argument === '-f') {
+                $options['force'] = true;
+            } elseif (str_starts_with($argument, '--file=')) {
+                $options['file'] = substr($argument, strlen('--file='));
+            } else {
+                $positional[] = $argument;
+            }
+        }
+
+        return [$positional, $options];
     }
 
     private function isTaskFileArgument(string $argument, string $cwd): bool

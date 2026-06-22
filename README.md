@@ -114,14 +114,33 @@ composer deploy
 Both run the `deploy` task defined in the `runner.php`/`deploy.php` file found in the
 current working directory.
 
+If a task has a schedule attached (e.g. `->daily()`), running it by name only
+runs it when the schedule is currently due; otherwise grandpa prints a message
+instead of running it:
+
+```
+$ php bin/grandpa deploy
+Schedule for task "deploy" hasn't been met yet. Use --force/-f to run it anyway.
+```
+
+Pass `--force` or `-f` to run it regardless of its schedule:
+
+```
+php bin/grandpa deploy --force
+```
+
+Tasks with no schedule always run immediately.
+
 You can also point at a task file explicitly, similar to how PHPUnit takes a test
 file:
 
 ```
 php bin/grandpa runner.php deploy
+php bin/grandpa --file=runner.php deploy
 ```
 
-Running it without a task name lists the tasks defined in that file:
+Running it without a task name runs every task that has no schedule, or whose
+schedule is currently due (tasks with an unmet schedule are skipped silently):
 
 ```
 php bin/grandpa runner.php

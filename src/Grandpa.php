@@ -43,11 +43,25 @@ class Grandpa
         return array_keys($this->tasks);
     }
 
+    public function getTask(string $name): Task|null
+    {
+        return $this->tasks[$name] ?? null;
+    }
+
     public function runDueTasks(\DateTimeInterface|null $time = null): void
     {
         foreach ($this->tasks as $task) {
             if ($task->isDue($time)) {
                 $this->say("Running scheduled task \"{$task->getName()}\"");
+                $task->run();
+            }
+        }
+    }
+
+    public function runEligibleTasks(\DateTimeInterface|null $time = null): void
+    {
+        foreach ($this->tasks as $task) {
+            if (!$task->hasSchedule() || $task->isDue($time)) {
                 $task->run();
             }
         }
