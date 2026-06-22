@@ -61,6 +61,7 @@ class Ssh
             $args = [
                 escapeshellarg($this->plinkPath),
                 '-ssh',
+                '-batch',
                 '-P', escapeshellarg((string) $this->port),
                 '-pw', escapeshellarg($this->password),
             ];
