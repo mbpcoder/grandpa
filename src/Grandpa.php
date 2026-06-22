@@ -162,7 +162,7 @@ class Grandpa
 //$grandpa->test();
 //$grandpa->clean();
 //
-//// deploy via the task system, see deploy.php.example
+//// deploy via the task system
 //task('deploy', function () {
 //    $files = git()->changedFiles();
 //    ftp()->upload($files);
