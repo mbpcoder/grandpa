@@ -74,6 +74,10 @@ deploy (e.g. cache-clear/health-check routes): `http()->get($url)`,
 The `$options` array is passed straight through to Guzzle, so any Guzzle
 request option works. Requests that fail throw a `RuntimeException`.
 
+Chain `->retry($times, $delayMs)` before a request to retry on failure, e.g.
+`http()->retry(3, 500)->get($url)` attempts the request up to 3 times,
+waiting 500ms between attempts.
+
 ### Running a deploy
 
 ```
