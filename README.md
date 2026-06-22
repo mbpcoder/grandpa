@@ -177,6 +177,7 @@ used throughout the rest of this README.
    GRANDPA_SSH_PASSWORD=
    GRANDPA_SSH_PRIVATE_KEY=
    GRANDPA_SSH_PORT=22
+   GRANDPA_PLINK_PATH=
 
    GRANDPA_TELEGRAM_BOT_TOKEN=
    GRANDPA_TELEGRAM_BASE_URL=https://api.telegram.org
@@ -185,7 +186,7 @@ used throughout the rest of this README.
    ```
 
    - `GRANDPA_FTP_PATH` is the remote base directory everything is uploaded relative to.
-   - `GRANDPA_SSH_HOST` is only used for running post-deploy commands over SSH (FTP can't run commands). Set `GRANDPA_SSH_USERNAME`/`GRANDPA_SSH_PRIVATE_KEY` to use a key, or `GRANDPA_SSH_USERNAME`/`GRANDPA_SSH_PASSWORD` to authenticate with a password instead (password auth requires `sshpass` to be installed).
+   - `GRANDPA_SSH_HOST` is only used for running post-deploy commands over SSH (FTP can't run commands). Set `GRANDPA_SSH_USERNAME`/`GRANDPA_SSH_PRIVATE_KEY` to use a key, or `GRANDPA_SSH_USERNAME`/`GRANDPA_SSH_PASSWORD` to authenticate with a password instead (password auth requires `sshpass` to be installed on Linux/macOS, or `GRANDPA_PLINK_PATH` set to a `plink.exe` path on Windows).
    - `GRANDPA_TELEGRAM_*` vars are only needed if a task calls `telegram()` to send notifications.
    - Optionally require `vlucas/phpdotenv` (`composer require vlucas/phpdotenv`) for fuller `.env` parsing; Grandpa falls back to a built-in parser if it's not installed.
 
@@ -429,7 +430,9 @@ beforehand (`ssh-copy-id user@example.com`) and make sure
 `ssh user@example.com` works without a prompt before running `grandpa deploy`,
 or point `GRANDPA_SSH_PRIVATE_KEY` at a specific key file. Alternatively, set
 `GRANDPA_SSH_PASSWORD` to authenticate with a password (this shells out to
-`sshpass`, which must be installed separately).
+`sshpass`, which must be installed separately). On Windows, where `sshpass`
+isn't available, set `GRANDPA_PLINK_PATH` to the path of PuTTY's `plink.exe`
+and password auth will be run through `plink` instead.
 
 > [!NOTE]
 > If your host only accepts SFTP, use `storage()->sftp()` instead of
