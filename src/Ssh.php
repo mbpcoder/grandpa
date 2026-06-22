@@ -38,11 +38,7 @@ class Ssh
 
         $usePlink = $this->password !== '' && \PHP_OS_FAMILY === 'Windows' && $this->plinkPath !== '';
 
-        $fullCommand = implode(' ', $this->buildArgs($target, $command, $usePlink));
-
-        $output = [];
-        exec($fullCommand . ' 2>&1', $output, $exitCode);
-        $result = implode("\n", $output);
+        [$result, $exitCode] = $this->exec($this->buildArgs($target, $command, $usePlink));
 
         if ($usePlink) {
             if (stripos($result, 'host key is not cached') !== false) {
@@ -84,15 +80,54 @@ class Ssh
         return $result;
     }
 
+    /**
+     * @param list<string> $args
+     * @return array{0: string, 1: int}
+     */
+    private function exec(array $args): array
+    {
+        $descriptors = [
+            0 => ['pipe', 'r'],
+            1 => ['pipe', 'w'],
+            2 => ['pipe', 'w'],
+        ];
+
+        // Passing $args as an array (rather than a shell string) bypasses
+        // cmd.exe/escapeshellarg entirely, so passwords with special
+        // characters reach the child process intact.
+        $process = proc_open($args, $descriptors, $pipes);
+
+        if ($process === false) {
+            throw new \RuntimeException('Failed to start SSH process: ' . implode(' ', $args));
+        }
+
+        fclose($pipes[0]);
+
+        $stdout = stream_get_contents($pipes[1]);
+        $stderr = stream_get_contents($pipes[2]);
+
+        fclose($pipes[1]);
+        fclose($pipes[2]);
+
+        $exitCode = proc_close($process);
+
+        $result = trim(implode("\n", array_filter([$stdout, $stderr])));
+
+        return [$result, $exitCode];
+    }
+
+    /**
+     * @return list<string>
+     */
     private function buildArgs(string $target, string $command, bool $usePlink): array
     {
         if ($usePlink) {
             $args = [
-                escapeshellarg($this->plinkPath),
+                $this->plinkPath,
                 '-ssh',
                 '-batch',
-                '-P', escapeshellarg((string) $this->port),
-                '-pw', escapeshellarg($this->password),
+                '-P', (string) $this->port,
+                '-pw', $this->password,
             ];
         } else {
             $args = [];
@@ -100,21 +135,21 @@ class Ssh
             if ($this->password !== '' && \PHP_OS_FAMILY !== 'Windows') {
                 $args[] = 'sshpass';
                 $args[] = '-p';
-                $args[] = escapeshellarg($this->password);
+                $args[] = $this->password;
             }
 
             $args[] = 'ssh';
             $args[] = '-p';
-            $args[] = escapeshellarg((string) $this->port);
+            $args[] = (string) $this->port;
         }
 
         if ($this->privateKey !== '') {
             $args[] = '-i';
-            $args[] = escapeshellarg($this->privateKey);
+            $args[] = $this->privateKey;
         }
 
-        $args[] = escapeshellarg($target);
-        $args[] = escapeshellarg($command);
+        $args[] = $target;
+        $args[] = $command;
 
         return $args;
     }
