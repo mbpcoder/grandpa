@@ -123,8 +123,8 @@ runs Artisan commands afterwards, e.g. over SSH:
 task('deploy', function () {
     $files = git()->changedFiles();
 
-    ftp()->upload($files);
-    ftp()->delete(git()->deletedFiles());
+    storage()->ftp()->upload($files);
+    storage()->ftp()->delete(git()->deletedFiles());
 
     git()->saveRevision();
 
@@ -185,6 +185,25 @@ used throughout the rest of this README.
    - `GRANDPA_TELEGRAM_*` vars are only needed if a task calls `telegram()` to send notifications.
    - Optionally require `vlucas/phpdotenv` (`composer require vlucas/phpdotenv`) for fuller `.env` parsing; Grandpa falls back to a built-in parser if it's not installed.
 
+   #### Storage backends
+
+   `storage()` gives access to several interchangeable file storage backends, each
+   with the same `upload()`/`delete()`/`uploadDir()`/`purge()` API as `Storage`.
+   Pick whichever applies and configure only that one — unused backends are never
+   connected to.
+
+   | Backend | Helper | Env vars |
+   | --- | --- | --- |
+   | FTP/FTPS | `storage()->ftp()` | `GRANDPA_FTP_HOST`, `GRANDPA_FTP_USERNAME`, `GRANDPA_FTP_PASSWORD`, `GRANDPA_FTP_PORT`, `GRANDPA_FTP_PATH`, `GRANDPA_FTP_PASSIVE` |
+   | SFTP | `storage()->sftp()` | `GRANDPA_SFTP_HOST`, `GRANDPA_SFTP_USERNAME`, `GRANDPA_SFTP_PASSWORD` or `GRANDPA_SFTP_PRIVATE_KEY`/`GRANDPA_SFTP_PASSPHRASE`, `GRANDPA_SFTP_PORT`, `GRANDPA_SFTP_PATH` |
+   | S3 / S3-compatible | `storage()->s3()` | `GRANDPA_S3_KEY`, `GRANDPA_S3_SECRET`, `GRANDPA_S3_REGION`, `GRANDPA_S3_BUCKET`, `GRANDPA_S3_PATH`, `GRANDPA_S3_ENDPOINT` (set for MinIO/DigitalOcean Spaces/etc.), `GRANDPA_S3_USE_PATH_STYLE` |
+   | GitLab repository | `storage()->gitlab()` | `GRANDPA_GITLAB_PROJECT_ID`, `GRANDPA_GITLAB_BRANCH`, `GRANDPA_GITLAB_BASE_URL`, `GRANDPA_GITLAB_TOKEN`, `GRANDPA_GITLAB_PATH` |
+   | Google Drive | `storage()->googleDrive()` | `GRANDPA_GOOGLE_DRIVE_CLIENT_ID`, `GRANDPA_GOOGLE_DRIVE_CLIENT_SECRET`, `GRANDPA_GOOGLE_DRIVE_REFRESH_TOKEN`, `GRANDPA_GOOGLE_DRIVE_PATH` |
+
+   `storage()->default()` (used internally by `git()` for revision tracking)
+   picks a backend based on `GRANDPA_STORAGE_DRIVER` (`ftp` by default; also
+   accepts `sftp`, `s3`, `gitlab`, `google-drive`).
+
    > [!WARNING]
    > Never commit `.env` — it holds your FTP, SSH, and Telegram credentials.
 
@@ -203,7 +222,7 @@ used throughout the rest of this README.
    Next.js, Angular CLI, Vue CLI), and writes a `runner.php` with a `deploy` task
    tailored to what it found: a build step (`npm`/`yarn`/`pnpm run build`) if a
    `build` script exists, incremental git-based upload if it's a git repo, and
-   `ftp()->purge()`/`uploadDir()` of the detected build output folder.
+   `storage()->ftp()->purge()`/`uploadDir()` of the detected build output folder.
 
    Pass `-i` or `--interactive` to also be prompted for FTP/SSH credentials, which
    get written to `.env` (an existing `.env` is left untouched):
@@ -223,11 +242,11 @@ the helper functions below inside the task callback:
 task('deploy', function () {
     $files = git()->changedFiles();          // added/modified files since the last deploy
 
-    ftp()->upload($files);                    // upload only changed files
-    ftp()->delete(git()->deletedFiles());    // remove files deleted from git
+    storage()->ftp()->upload($files);                    // upload only changed files
+    storage()->ftp()->delete(git()->deletedFiles());    // remove files deleted from git
 
-    ftp()->purge('public/build');             // wipe a remote directory
-    ftp()->uploadDir('public/build');        // push a whole local directory (e.g. built assets)
+    storage()->ftp()->purge('public/build');             // wipe a remote directory
+    storage()->ftp()->uploadDir('public/build');        // push a whole local directory (e.g. built assets)
 
     git()->saveRevision();                    // record the deployed commit on the server
 
@@ -246,7 +265,7 @@ How the incremental upload works:
   (`git ls-files`) is uploaded.
 - `git()->saveRevision()` writes the current `HEAD` hash back to the remote `.revision` file.
 
-Available helpers: `task()`, `git()`, `ftp()`, `ssh()`, `http()`, `telegram()`, `say()`, `env()`.
+Available helpers: `task()`, `git()`, `storage()`, `ssh()`, `http()`, `telegram()`, `say()`, `env()`.
 
 `http()` returns a small Guzzle-backed client for hitting URLs during a
 deploy (e.g. cache-clear/health-check routes): `http()->get($url)`,
@@ -356,8 +375,8 @@ warms it up) to finish the deploy:
 task('deploy', function () {
     $files = git()->changedFiles();
 
-    ftp()->upload($files);
-    ftp()->delete(git()->deletedFiles());
+    storage()->ftp()->upload($files);
+    storage()->ftp()->delete(git()->deletedFiles());
 
     git()->saveRevision();
 
@@ -369,7 +388,7 @@ task('deploy', function () {
 ```
 
 > [!NOTE]
-> `ftp()` talks to a plain FTP/FTPS server, which is what most shared hosts
+> `storage()->ftp()` talks to a plain FTP/FTPS server, which is what most shared hosts
 > provide. There's no SSH on this kind of host, so any "artisan migrate" or
 > "clear cache" step has to happen through an HTTP endpoint your app exposes
 > for that purpose (protect it with a secret token/header).
@@ -386,11 +405,11 @@ no need for an HTTP endpoint:
 task('deploy', function () {
     $files = git()->changedFiles();
 
-    ftp()->upload($files);
-    ftp()->delete(git()->deletedFiles());
+    storage()->ftp()->upload($files);
+    storage()->ftp()->delete(git()->deletedFiles());
 
-    ftp()->purge('public/build');
-    ftp()->uploadDir('public/build');
+    storage()->ftp()->purge('public/build');
+    storage()->ftp()->uploadDir('public/build');
 
     git()->saveRevision();
 
@@ -408,15 +427,9 @@ beforehand (`ssh-copy-id deploy@example.com`) and make sure `ssh deploy@example.
 works without a prompt before running `grandpa deploy`.
 
 > [!NOTE]
-> Grandpa's built-in `ftp()` helper only speaks FTP/FTPS (via
-> `league/flysystem-ftp`), not SFTP. If your host only accepts SFTP and you
-> need actual file transfer (not just running commands over SSH), drive
-> `rsync`/`git pull` on the server through `ssh()->run()` instead of
-> `ftp()->upload()`, for example:
->
-> ```php
-> ssh()->run('cd /var/www/app && git pull --ff-only && php artisan migrate --force');
-> ```
+> If your host only accepts SFTP, use `storage()->sftp()` instead of
+> `storage()->ftp()` — same `upload()`/`delete()`/`uploadDir()` API, configured
+> via `GRANDPA_SFTP_*` env vars (see below).
 
 #### Notifying a Telegram chat after a deploy
 
@@ -430,8 +443,8 @@ task('deploy', function () {
     try {
         $files = git()->changedFiles();
 
-        ftp()->upload($files);
-        ftp()->delete(git()->deletedFiles());
+        storage()->ftp()->upload($files);
+        storage()->ftp()->delete(git()->deletedFiles());
 
         git()->saveRevision();
 

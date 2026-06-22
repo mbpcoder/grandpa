@@ -5,35 +5,16 @@ declare(strict_types=1);
 namespace Grandpa;
 
 use League\Flysystem\Filesystem;
+use League\Flysystem\FilesystemAdapter;
 use League\Flysystem\FilesystemOperator;
-use League\Flysystem\Ftp\FtpAdapter;
-use League\Flysystem\Ftp\FtpConnectionOptions;
 use League\Flysystem\StorageAttributes;
 
 class Storage
 {
     private FilesystemOperator|null $filesystem = null;
 
-    public function __construct(
-        private readonly string $host,
-        private readonly string $username,
-        private readonly string $password,
-        private readonly int $port = 21,
-        private readonly string $root = '',
-        private readonly bool $passive = true,
-    ) {
-    }
-
-    public static function fromEnv(): self
+    public function __construct(private readonly FilesystemAdapter $adapter)
     {
-        return new self(
-            host: (string) env('GRANDPA_FTP_HOST', ''),
-            username: (string) env('GRANDPA_FTP_USERNAME', ''),
-            password: (string) env('GRANDPA_FTP_PASSWORD', ''),
-            port: (int) env('GRANDPA_FTP_PORT', 21),
-            root: (string) env('GRANDPA_FTP_PATH', ''),
-            passive: filter_var(env('GRANDPA_FTP_PASSIVE', true), FILTER_VALIDATE_BOOLEAN),
-        );
     }
 
     public function exists(string $path): bool
@@ -226,25 +207,7 @@ class Storage
 
     private function filesystem(): FilesystemOperator
     {
-        if (!extension_loaded('ftp')) {
-            throw new \RuntimeException(
-                'The PHP "ftp" extension is required for FTP deployment but is not enabled. '
-                . 'Enable it in your php.ini (extension=ftp) and restart, then try again.'
-            );
-        }
-
-        return $this->filesystem ??= new Filesystem(new FtpAdapter(
-            FtpConnectionOptions::fromArray([
-                'host' => $this->host,
-                'username' => $this->username,
-                'password' => $this->password,
-                'port' => $this->port,
-                'root' => $this->root,
-                'passive' => $this->passive,
-                'ssl' => false,
-                'timeout' => 30,
-            ]),
-        ));
+        return $this->filesystem ??= new Filesystem($this->adapter);
     }
 
     public function __destruct()

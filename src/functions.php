@@ -7,7 +7,7 @@ use Grandpa\Git;
 use Grandpa\Grandpa;
 use Grandpa\Http;
 use Grandpa\Ssh;
-use Grandpa\Storage;
+use Grandpa\StorageManager;
 use Grandpa\Task;
 use Grandpa\Telegram;
 
@@ -25,10 +25,10 @@ if (!function_exists('git')) {
     }
 }
 
-if (!function_exists('ftp')) {
-    function ftp(): Storage
+if (!function_exists('storage')) {
+    function storage(): StorageManager
     {
-        return Grandpa::instance()->ftp();
+        return Grandpa::instance()->storage();
     }
 }
 

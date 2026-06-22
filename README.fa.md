@@ -110,6 +110,25 @@ composer install
      (`composer require vlucas/phpdotenv`) برای پارس کامل‌تر `.env`؛ در صورت
      عدم نصب، Grandpa از یک پارسر داخلی ساده استفاده می‌کند.
 
+   #### بک‌اندهای ذخیره‌سازی
+
+   `storage()` به چند بک‌اند ذخیره‌سازی فایل قابل تبادل دسترسی می‌دهد که همگی
+   API یکسانی برای `upload()`/`delete()`/`uploadDir()`/`purge()` دارند. فقط
+   موردی که نیاز دارید را پیکربندی کنید — بک‌اندهای استفاده‌نشده هرگز متصل
+   نمی‌شوند.
+
+   | بک‌اند | کمک‌کننده | متغیرهای محیطی |
+   | --- | --- | --- |
+   | FTP/FTPS | `storage()->ftp()` | `GRANDPA_FTP_HOST`، `GRANDPA_FTP_USERNAME`، `GRANDPA_FTP_PASSWORD`، `GRANDPA_FTP_PORT`، `GRANDPA_FTP_PATH`، `GRANDPA_FTP_PASSIVE` |
+   | SFTP | `storage()->sftp()` | `GRANDPA_SFTP_HOST`، `GRANDPA_SFTP_USERNAME`، `GRANDPA_SFTP_PASSWORD` یا `GRANDPA_SFTP_PRIVATE_KEY`/`GRANDPA_SFTP_PASSPHRASE`، `GRANDPA_SFTP_PORT`، `GRANDPA_SFTP_PATH` |
+   | S3 / سازگار با S3 | `storage()->s3()` | `GRANDPA_S3_KEY`، `GRANDPA_S3_SECRET`، `GRANDPA_S3_REGION`، `GRANDPA_S3_BUCKET`، `GRANDPA_S3_PATH`، `GRANDPA_S3_ENDPOINT` (برای MinIO/DigitalOcean Spaces/و غیره)، `GRANDPA_S3_USE_PATH_STYLE` |
+   | مخزن GitLab | `storage()->gitlab()` | `GRANDPA_GITLAB_PROJECT_ID`، `GRANDPA_GITLAB_BRANCH`، `GRANDPA_GITLAB_BASE_URL`، `GRANDPA_GITLAB_TOKEN`، `GRANDPA_GITLAB_PATH` |
+   | Google Drive | `storage()->googleDrive()` | `GRANDPA_GOOGLE_DRIVE_CLIENT_ID`، `GRANDPA_GOOGLE_DRIVE_CLIENT_SECRET`، `GRANDPA_GOOGLE_DRIVE_REFRESH_TOKEN`، `GRANDPA_GOOGLE_DRIVE_PATH` |
+
+   `storage()->default()` (که داخلی توسط `git()` برای ردیابی نسخه استفاده
+   می‌شود) بر اساس `GRANDPA_STORAGE_DRIVER` یک بک‌اند انتخاب می‌کند (پیش‌فرض
+   `ftp`؛ مقادیر `sftp`، `s3`، `gitlab`، `google-drive` نیز پذیرفته می‌شوند).
+
    > [!WARNING]
    > هرگز `.env` را کامیت نکنید — این فایل اطلاعات اعتباری FTP، SSH و تلگرام
    > شما را در خود دارد.
@@ -130,7 +149,7 @@ composer install
    `deploy` متناسب با آنچه پیدا کرده می‌نویسد: یک مرحله‌ی بیلد
    (`npm`/`yarn`/`pnpm run build`) در صورت وجود اسکریپت `build`، آپلود
    تدریجی مبتنی بر git در صورت بودن یک مخزن گیت، و
-   `ftp()->purge()`/`uploadDir()` برای پوشه‌ی خروجی بیلد شناسایی‌شده.
+   `storage()->ftp()->purge()`/`uploadDir()` برای پوشه‌ی خروجی بیلد شناسایی‌شده.
 
    پرچم `-i` یا `--interactive` را برای دریافت اطلاعات اعتباری FTP/SSH از طریق
    پرامپت اضافه کنید که در `.env` نوشته می‌شوند (یک `.env` موجود دست‌نخورده
@@ -151,11 +170,11 @@ composer install
 task('deploy', function () {
     $files = git()->changedFiles();          // فایل‌های اضافه/تغییریافته از آخرین دیپلوی
 
-    ftp()->upload($files);                    // فقط فایل‌های تغییریافته را آپلود کن
-    ftp()->delete(git()->deletedFiles());    // فایل‌های حذف‌شده از git را حذف کن
+    storage()->ftp()->upload($files);                    // فقط فایل‌های تغییریافته را آپلود کن
+    storage()->ftp()->delete(git()->deletedFiles());    // فایل‌های حذف‌شده از git را حذف کن
 
-    ftp()->purge('public/build');             // یک پوشه‌ی ریموت را پاک کن
-    ftp()->uploadDir('public/build');        // یک پوشه‌ی محلی کامل را آپلود کن (مثلاً اسکریپت‌های بیلدشده)
+    storage()->ftp()->purge('public/build');             // یک پوشه‌ی ریموت را پاک کن
+    storage()->ftp()->uploadDir('public/build');        // یک پوشه‌ی محلی کامل را آپلود کن (مثلاً اسکریپت‌های بیلدشده)
 
     git()->saveRevision();                    // کامیت دیپلوی‌شده را روی سرور ثبت کن
 
@@ -177,7 +196,7 @@ task('deploy', function () {
 - `git()->saveRevision()` هش `HEAD` فعلی را در فایل `.revision` ریموت
   می‌نویسد.
 
-توابع کمکی موجود: `task()`، `git()`، `ftp()`، `ssh()`، `http()`،
+توابع کمکی موجود: `task()`، `git()`، `storage()`، `ssh()`، `http()`،
 `telegram()`، `say()`، `env()`.
 
 `http()` یک کلاینت کوچک مبتنی بر Guzzle برای فراخوانی URL‌ها در طول دیپلوی
@@ -292,8 +311,8 @@ SSH. فایل‌های تغییریافته را آپلود کنید، سپس ی
 task('deploy', function () {
     $files = git()->changedFiles();
 
-    ftp()->upload($files);
-    ftp()->delete(git()->deletedFiles());
+    storage()->ftp()->upload($files);
+    storage()->ftp()->delete(git()->deletedFiles());
 
     git()->saveRevision();
 
@@ -305,7 +324,7 @@ task('deploy', function () {
 ```
 
 > [!NOTE]
-> `ftp()` با یک سرور FTP/FTPS ساده صحبت می‌کند، که چیزی است که بیشتر
+> `storage()->ftp()` با یک سرور FTP/FTPS ساده صحبت می‌کند، که چیزی است که بیشتر
 > هاست‌های اشتراکی فراهم می‌کنند. در این نوع هاست SSH وجود ندارد، پس هر
 > مرحله‌ی «artisan migrate» یا «پاک‌سازی کش» باید از طریق یک نقطه‌ی پایانی
 > HTTP که اپلیکیشن شما برای این هدف در معرض قرار می‌دهد انجام شود (آن را با
@@ -323,11 +342,11 @@ task('deploy', function () {
 task('deploy', function () {
     $files = git()->changedFiles();
 
-    ftp()->upload($files);
-    ftp()->delete(git()->deletedFiles());
+    storage()->ftp()->upload($files);
+    storage()->ftp()->delete(git()->deletedFiles());
 
-    ftp()->purge('public/build');
-    ftp()->uploadDir('public/build');
+    storage()->ftp()->purge('public/build');
+    storage()->ftp()->uploadDir('public/build');
 
     git()->saveRevision();
 
@@ -346,15 +365,9 @@ task('deploy', function () {
 `ssh deploy@example.com` بدون پرامپت کار می‌کند.
 
 > [!NOTE]
-> کمک‌کننده‌ی داخلی `ftp()` در Grandpa فقط FTP/FTPS را صحبت می‌کند (از طریق
-> `league/flysystem-ftp`)، نه SFTP. اگر هاست شما فقط SFTP را می‌پذیرد و به
-> انتقال فایل واقعی (نه فقط اجرای دستورات روی SSH) نیاز دارید،
-> `rsync`/`git pull` را روی سرور از طریق `ssh()->run()` به‌جای
-> `ftp()->upload()` اجرا کنید، مثلاً:
->
-> ```php
-> ssh()->run('cd /var/www/app && git pull --ff-only && php artisan migrate --force');
-> ```
+> اگر هاست شما فقط SFTP را می‌پذیرد، به‌جای `storage()->ftp()` از
+> `storage()->sftp()` استفاده کنید — همان API برای `upload()`/`delete()`/
+> `uploadDir()`، با تنظیم از طریق متغیرهای `GRANDPA_SFTP_*`.
 
 #### اطلاع‌رسانی به یک چت تلگرام پس از دیپلوی
 
@@ -368,8 +381,8 @@ task('deploy', function () {
     try {
         $files = git()->changedFiles();
 
-        ftp()->upload($files);
-        ftp()->delete(git()->deletedFiles());
+        storage()->ftp()->upload($files);
+        storage()->ftp()->delete(git()->deletedFiles());
 
         git()->saveRevision();
 

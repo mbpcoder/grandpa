@@ -144,7 +144,7 @@ class Init
         echo "Configuring deploy credentials (leave blank to skip a field).\n";
 
         return [
-            'ftpHost' => $this->prompt('FTP/SFTP host'),
+            'ftpHost' => $this->prompt('FTP host'),
             'ftpUser' => $this->prompt('FTP username'),
             'ftpPass' => $this->prompt('FTP password'),
             'ftpPort' => $this->prompt('FTP port', '21'),
@@ -214,16 +214,16 @@ class Init
         if ($project['hasGit']) {
             $lines[] = '    $files = git()->changedFiles();';
             $lines[] = '';
-            $lines[] = '    ftp()->upload($files);';
-            $lines[] = '    ftp()->delete(git()->deletedFiles());';
+            $lines[] = '    storage()->ftp()->upload($files);';
+            $lines[] = '    storage()->ftp()->delete(git()->deletedFiles());';
         } else {
-            $lines[] = "    ftp()->uploadDir('.');";
+            $lines[] = "    storage()->ftp()->uploadDir('.');";
         }
 
         if ($project['buildDir'] !== null) {
             $lines[] = '';
-            $lines[] = '    ftp()->purge(' . var_export($project['buildDir'], true) . ');';
-            $lines[] = '    ftp()->uploadDir(' . var_export($project['buildDir'], true) . ');';
+            $lines[] = '    storage()->ftp()->purge(' . var_export($project['buildDir'], true) . ');';
+            $lines[] = '    storage()->ftp()->uploadDir(' . var_export($project['buildDir'], true) . ');';
         }
 
         if ($project['hasGit']) {
