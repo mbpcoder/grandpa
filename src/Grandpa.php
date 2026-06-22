@@ -14,6 +14,7 @@ class Grandpa
     private Git|null $git = null;
     private Storage|null $storage = null;
     private Ssh|null $ssh = null;
+    private Http|null $http = null;
 
     private $sass;
 
@@ -54,6 +55,11 @@ class Grandpa
     public function ssh(): Ssh
     {
         return $this->ssh ??= Ssh::fromEnv();
+    }
+
+    public function http(): Http
+    {
+        return $this->http ??= new Http();
     }
 
     public function css()
