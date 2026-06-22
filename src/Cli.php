@@ -13,10 +13,19 @@ class Cli
         $first = $positional[0] ?? null;
 
         if ($first === null && !isset($options['file'])) {
-            fwrite(STDERR, "Usage: grandpa <task>|schedule:run|init [--force|-f]\n");
-            fwrite(STDERR, "       grandpa <file.php> [task] [--force|-f]\n");
-            fwrite(STDERR, "       grandpa --file=<file.php> [task] [--force|-f]\n");
+            fwrite(STDERR, "Usage: grandpa <task>|schedule:run|init [--force|-f] [--dir=<path>]\n");
+            fwrite(STDERR, "       grandpa <file.php> [task] [--force|-f] [--dir=<path>]\n");
+            fwrite(STDERR, "       grandpa --file=<file.php> [task] [--force|-f] [--dir=<path>]\n");
             exit(1);
+        }
+
+        if (isset($options['dir'])) {
+            $dir = $this->resolvePath((string) $options['dir'], (string) getcwd());
+
+            if (!is_dir($dir) || !chdir($dir)) {
+                fwrite(STDERR, "Directory not found: {$dir}\n");
+                exit(1);
+            }
         }
 
         $cwd = (string) getcwd();
@@ -100,6 +109,10 @@ class Cli
                 $options['force'] = true;
             } elseif (str_starts_with($argument, '--file=')) {
                 $options['file'] = substr($argument, strlen('--file='));
+            } elseif (str_starts_with($argument, '--dir=')) {
+                $options['dir'] = substr($argument, strlen('--dir='));
+            } elseif (str_starts_with($argument, '-d=')) {
+                $options['dir'] = substr($argument, strlen('-d='));
             } else {
                 $positional[] = $argument;
             }

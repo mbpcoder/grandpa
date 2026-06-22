@@ -219,10 +219,24 @@ php bin/grandpa runner.php
 | `grandpa <file.php>` | Run every eligible task (no schedule, or schedule currently due) from `<file.php>` instead of auto-discovering it. |
 | `grandpa <file.php> <task>` | Run `<task>` from `<file.php>` instead of the auto-discovered file. |
 | `grandpa --file=<file.php> [task]` | Same as the positional file argument above; useful when `<file.php>` doesn't look like a path Grandpa would auto-detect. |
+| `grandpa <task> --dir=<path>` / `grandpa <task> -d=<path>` | Run `<task>` against the project in `<path>` instead of the current directory: `runner.php`/`deploy.php`/`.env` are looked up there, and the process `chdir()`s into it before running, so git/FTP paths resolve relative to that project. |
 | `grandpa schedule:run` | Run every task whose schedule is currently due. Intended to be triggered once a minute by a single cron entry. |
 
 Flags can be combined, e.g. `grandpa --file=runner.php deploy --force` runs
 the `deploy` task from `runner.php` even if its schedule isn't due yet.
+
+### Running tasks against another directory
+
+By default Grandpa looks for `runner.php`/`deploy.php`/`.env` in, and
+git/FTP-relative paths resolve against, the current working directory. Pass
+`--dir=<path>` (or `-d=<path>`, relative or absolute) to point Grandpa at a
+different project directory instead — handy for keeping one general
+"grandpa" project with tasks for several of your other projects:
+
+```
+php bin/grandpa deploy --dir=/path/to/some-other-project
+php bin/grandpa --dir=../another-project deploy --force
+```
 
 ### Recipes
 
