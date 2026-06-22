@@ -135,9 +135,15 @@ class Grandpa
         return $this;
     }
 
-    public function say(string $message): void
+    public function say(string|null $message = null): Console|null
     {
+        if ($message === null) {
+            return $this->console();
+        }
+
         $this->console()->say($message);
+
+        return null;
     }
 
     public function console(): Console

@@ -55,16 +55,9 @@ if (!function_exists('run')) {
 }
 
 if (!function_exists('say')) {
-    function say(string $message): void
+    function say(string|null $message = null): Console|null
     {
-        Grandpa::instance()->say($message);
-    }
-}
-
-if (!function_exists('console')) {
-    function console(): Console
-    {
-        return Grandpa::instance()->console();
+        return Grandpa::instance()->say($message);
     }
 }
 
