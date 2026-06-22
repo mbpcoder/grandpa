@@ -13,7 +13,7 @@ class Cli
         $first = $positional[0] ?? null;
 
         if ($first === null && !isset($options['file'])) {
-            fwrite(STDERR, "Usage: grandpa <task>|schedule:run|init [--force|-f] [--dir=<path>]\n");
+            fwrite(STDERR, "Usage: grandpa <task>|schedule:run|watch|init [--force|-f] [--dir=<path>]\n");
             fwrite(STDERR, "       grandpa <file.php> [task] [--force|-f] [--dir=<path>]\n");
             fwrite(STDERR, "       grandpa --file=<file.php> [task] [--force|-f] [--dir=<path>]\n");
             exit(1);
@@ -71,6 +71,13 @@ class Cli
                 return;
             }
 
+            if ($command === 'watch') {
+                $interval = isset($options['interval']) ? max(1, (int) $options['interval']) : 1;
+                Grandpa::instance()->watchLoop($interval);
+
+                return;
+            }
+
             $this->runNamedTask($command, $force);
         } catch (\Throwable $exception) {
             fwrite(STDERR, $exception->getMessage() . PHP_EOL);
@@ -113,6 +120,8 @@ class Cli
                 $options['dir'] = substr($argument, strlen('--dir='));
             } elseif (str_starts_with($argument, '-d=')) {
                 $options['dir'] = substr($argument, strlen('-d='));
+            } elseif (str_starts_with($argument, '--interval=')) {
+                $options['interval'] = substr($argument, strlen('--interval='));
             } else {
                 $positional[] = $argument;
             }

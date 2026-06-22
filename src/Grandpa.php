@@ -68,6 +68,52 @@ class Grandpa
         }
     }
 
+    /**
+     * Checks every task once: runs cron tasks that are newly due and watch()
+     * tasks whose folder changed since the last tick. Exceptions from a
+     * single task are caught and reported so they don't kill the loop.
+     */
+    public function tick(\DateTimeInterface|null $time = null): void
+    {
+        foreach ($this->tasks as $task) {
+            try {
+                if ($task->hasSchedule() && $task->isDueOnce($time)) {
+                    $this->say("Running scheduled task \"{$task->getName()}\"");
+                    $task->run();
+                } elseif ($task->hasWatch() && $task->watchChanged()) {
+                    $this->say("Change detected in \"{$task->getWatchPath()}\", running task \"{$task->getName()}\"");
+                    $task->run();
+                }
+            } catch (\Throwable $exception) {
+                $this->say("Task \"{$task->getName()}\" failed: {$exception->getMessage()}");
+            }
+        }
+    }
+
+    /**
+     * Runs tick() in a loop until the process is killed (e.g. Ctrl+C), so
+     * scheduled and watch() tasks keep getting checked indefinitely.
+     */
+    public function watchLoop(int $intervalSeconds = 1): void
+    {
+        $running = true;
+
+        if (function_exists('pcntl_async_signals')) {
+            pcntl_async_signals(true);
+            pcntl_signal(SIGINT, function () use (&$running): void {
+                $running = false;
+            });
+            pcntl_signal(SIGTERM, function () use (&$running): void {
+                $running = false;
+            });
+        }
+
+        while ($running) {
+            $this->tick();
+            sleep($intervalSeconds);
+        }
+    }
+
     public function storage(): StorageManager
     {
         return $this->storage ??= new StorageManager();

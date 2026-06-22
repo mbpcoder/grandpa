@@ -70,6 +70,64 @@ final class GrandpaTest extends TestCase
         $this->expectOutputString('hello' . PHP_EOL);
     }
 
+    public function testTickRunsDueCronTaskOnceAndWatchTaskOnChange(): void
+    {
+        $dir = sys_get_temp_dir() . '/grandpa-tick-test-' . uniqid();
+        mkdir($dir);
+        file_put_contents($dir . '/a.txt', 'one');
+
+        try {
+            $cronRuns = 0;
+            $watchRuns = 0;
+
+            Grandpa::instance()->task('cron', function () use (&$cronRuns): void {
+                $cronRuns++;
+            })->everyMinute();
+
+            Grandpa::instance()->task('watcher', function () use (&$watchRuns): void {
+                $watchRuns++;
+            })->watch($dir);
+
+            $time = new \DateTimeImmutable('2024-06-15 12:00:00');
+
+            Grandpa::instance()->tick($time);
+            self::assertSame(1, $cronRuns);
+            self::assertSame(0, $watchRuns);
+
+            // Same minute: cron task must not re-run, watch baseline already recorded.
+            Grandpa::instance()->tick($time);
+            self::assertSame(1, $cronRuns);
+            self::assertSame(0, $watchRuns);
+
+            sleep(1);
+            file_put_contents($dir . '/a.txt', 'two');
+
+            Grandpa::instance()->tick($time);
+            self::assertSame(1, $cronRuns);
+            self::assertSame(1, $watchRuns);
+        } finally {
+            @unlink($dir . '/a.txt');
+            @rmdir($dir);
+        }
+    }
+
+    public function testTickCatchesExceptionsFromOneTaskAndContinues(): void
+    {
+        $otherRan = false;
+
+        Grandpa::instance()->task('broken', function (): void {
+            throw new \RuntimeException('boom');
+        })->everyMinute();
+
+        Grandpa::instance()->task('other', function () use (&$otherRan): void {
+            $otherRan = true;
+        })->everyMinute();
+
+        Grandpa::instance()->tick(new \DateTimeImmutable('2024-06-15 12:00:00'));
+
+        self::assertTrue($otherRan);
+    }
+
     private function resetSingleton(): void
     {
         $property = new \ReflectionProperty(Grandpa::class, 'instance');

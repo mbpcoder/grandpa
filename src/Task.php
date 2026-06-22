@@ -7,6 +7,13 @@ namespace Grandpa;
 class Task implements ITask
 {
     private string|null $cronExpression = null;
+    private string|null $lastDueKey = null;
+
+    private string|null $watchPath = null;
+    /** @var list<string> */
+    private array $watchExtensions = [];
+    private string|null $watchSignature = null;
+    private bool $watchInitialized = false;
 
     public function __construct(
         private readonly string $name,
@@ -43,6 +50,109 @@ class Task implements ITask
         }
 
         return (new CronExpression($this->cronExpression))->isDue($time ?? new \DateTimeImmutable());
+    }
+
+    /**
+     * Like isDue(), but only returns true once per matching minute, so a
+     * long-running watch loop ticking faster than once a minute doesn't
+     * re-trigger the task repeatedly while it remains due.
+     */
+    public function isDueOnce(\DateTimeInterface|null $time = null): bool
+    {
+        if (!$this->hasSchedule()) {
+            return false;
+        }
+
+        $time ??= new \DateTimeImmutable();
+        $key = $time->format('Y-m-d H:i');
+
+        if ($key === $this->lastDueKey || !$this->isDue($time)) {
+            return false;
+        }
+
+        $this->lastDueKey = $key;
+
+        return true;
+    }
+
+    /**
+     * @param list<string> $extensions File extensions (without the dot) to watch; empty means all files.
+     */
+    public function watch(string $path, array $extensions = []): static
+    {
+        $this->watchPath = $path;
+        $this->watchExtensions = array_map(fn (string $extension) => strtolower($extension), $extensions);
+
+        return $this;
+    }
+
+    public function hasWatch(): bool
+    {
+        return $this->watchPath !== null;
+    }
+
+    public function getWatchPath(): string|null
+    {
+        return $this->watchPath;
+    }
+
+    /**
+     * Returns true the first time it detects the watched folder differs
+     * from its previously recorded state. The first call after watch() is
+     * configured only records a baseline and returns false, so the task
+     * doesn't run immediately on startup.
+     */
+    public function watchChanged(): bool
+    {
+        if ($this->watchPath === null) {
+            return false;
+        }
+
+        $signature = $this->computeWatchSignature();
+
+        if (!$this->watchInitialized) {
+            $this->watchSignature = $signature;
+            $this->watchInitialized = true;
+
+            return false;
+        }
+
+        if ($signature === $this->watchSignature) {
+            return false;
+        }
+
+        $this->watchSignature = $signature;
+
+        return true;
+    }
+
+    private function computeWatchSignature(): string
+    {
+        if ($this->watchPath === null || !is_dir($this->watchPath)) {
+            return '';
+        }
+
+        $entries = [];
+
+        $iterator = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($this->watchPath, \FilesystemIterator::SKIP_DOTS)
+        );
+
+        foreach ($iterator as $file) {
+            if (!$file->isFile()) {
+                continue;
+            }
+
+            if ($this->watchExtensions !== [] && !in_array(strtolower($file->getExtension()), $this->watchExtensions, true)) {
+                continue;
+            }
+
+            $entries[] = $file->getPathname() . ':' . $file->getMTime() . ':' . $file->getSize();
+        }
+
+        sort($entries);
+
+        return hash('xxh128', implode('|', $entries));
     }
 
     public function everyMinute(): static

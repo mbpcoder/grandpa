@@ -90,4 +90,72 @@ final class TaskTest extends TestCase
         self::assertTrue($task->isDue(new \DateTimeImmutable('2024-01-01 00:00:00')));
         self::assertFalse($task->isDue(new \DateTimeImmutable('2024-02-01 00:00:00')));
     }
+
+    public function testIsDueOnceOnlyTriggersOncePerMinute(): void
+    {
+        $task = (new Task('demo', static function (): void {}))->everyMinute();
+
+        $time = new \DateTimeImmutable('2024-01-01 00:00:00');
+
+        self::assertTrue($task->isDueOnce($time));
+        self::assertFalse($task->isDueOnce($time));
+        self::assertFalse($task->isDueOnce($time->modify('+30 seconds')));
+        self::assertTrue($task->isDueOnce($time->modify('+1 minute')));
+    }
+
+    public function testHasWatchIsFalseWithoutWatch(): void
+    {
+        $task = new Task('demo', static function (): void {});
+
+        self::assertFalse($task->hasWatch());
+        self::assertFalse($task->watchChanged());
+    }
+
+    public function testWatchChangedIgnoresFirstScanThenDetectsChanges(): void
+    {
+        $dir = sys_get_temp_dir() . '/grandpa-watch-test-' . uniqid();
+        mkdir($dir);
+        file_put_contents($dir . '/a.txt', 'one');
+
+        try {
+            $task = (new Task('demo', static function (): void {}))->watch($dir);
+
+            self::assertTrue($task->hasWatch());
+            self::assertSame($dir, $task->getWatchPath());
+
+            // First check only records the baseline.
+            self::assertFalse($task->watchChanged());
+            self::assertFalse($task->watchChanged());
+
+            sleep(1);
+            file_put_contents($dir . '/a.txt', 'two');
+
+            self::assertTrue($task->watchChanged());
+            self::assertFalse($task->watchChanged());
+        } finally {
+            @unlink($dir . '/a.txt');
+            @rmdir($dir);
+        }
+    }
+
+    public function testWatchExtensionsFilterIgnoresOtherFiles(): void
+    {
+        $dir = sys_get_temp_dir() . '/grandpa-watch-test-' . uniqid();
+        mkdir($dir);
+        file_put_contents($dir . '/a.log', 'one');
+
+        try {
+            $task = (new Task('demo', static function (): void {}))->watch($dir, ['txt']);
+
+            self::assertFalse($task->watchChanged());
+
+            sleep(1);
+            file_put_contents($dir . '/a.log', 'two');
+
+            self::assertFalse($task->watchChanged());
+        } finally {
+            @unlink($dir . '/a.log');
+            @rmdir($dir);
+        }
+    }
 }
