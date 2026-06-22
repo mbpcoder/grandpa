@@ -17,6 +17,7 @@ Use Grandpa to:
   `->cron('* * * * *')`) driven by a single cron entry.
 - **Scaffold a deploy script automatically** for Vite/Webpack/Laravel Mix/
   Next.js/Angular/Vue projects with `grandpa init`.
+- **Send Telegram notifications** from a task, e.g. to report deploy status.
 
 ## Table of contents
 
@@ -72,7 +73,7 @@ used throughout the rest of this README.
 ### Setup
 
 1. Install Grandpa (see [Installation](#installation) above).
-2. Copy `.env.example` to `.env` and fill in your credentials. **Never commit `.env`.**
+2. Copy `.env.example` to `.env` and fill in your credentials.
 
    ```
    DEPLOY_FTP_HOST=ftp.example.com
@@ -83,11 +84,20 @@ used throughout the rest of this README.
    DEPLOY_FTP_PASSIVE=true
 
    DEPLOY_SSH_HOST=user@example.com
+
+   GRANDPA_TELEGRAM_BOT_TOKEN=
+   GRANDPA_TELEGRAM_BASE_URL=https://api.telegram.org
+   GRANDPA_TELEGRAM_CHAT_ID=
+   GRANDPA_TELEGRAM_TOPIC_ID=
    ```
 
    - `DEPLOY_FTP_PATH` is the remote base directory everything is uploaded relative to.
    - `DEPLOY_SSH_HOST` is only used for running post-deploy commands over SSH (FTP can't run commands).
+   - `GRANDPA_TELEGRAM_*` vars are only needed if a task calls `telegram()` to send notifications.
    - Optionally require `vlucas/phpdotenv` (`composer require vlucas/phpdotenv`) for fuller `.env` parsing; Grandpa falls back to a built-in parser if it's not installed.
+
+   > [!WARNING]
+   > Never commit `.env` — it holds your FTP, SSH, and Telegram credentials.
 
 3. Copy `deploy.php.example` to `deploy.php` (or `runner.php.example` to `runner.php`)
    in your project root and adjust it to your needs. `runner.php` is the more general
@@ -149,7 +159,7 @@ How the incremental upload works:
   (`git ls-files`) is uploaded.
 - `git()->saveRevision()` writes the current `HEAD` hash back to the remote `.revision` file.
 
-Available helpers: `task()`, `git()`, `ftp()`, `ssh()`, `http()`, `say()`, `env()`.
+Available helpers: `task()`, `git()`, `ftp()`, `ssh()`, `http()`, `telegram()`, `say()`, `env()`.
 
 `http()` returns a small Guzzle-backed client for hitting URLs during a
 deploy (e.g. cache-clear/health-check routes): `http()->get($url)`,
@@ -160,6 +170,11 @@ request option works. Requests that fail throw a `RuntimeException`.
 Chain `->retry($times, $delayMs)` before a request to retry on failure, e.g.
 `http()->retry(3, 500)->get($url)` attempts the request up to 3 times,
 waiting 500ms between attempts.
+
+`telegram()` sends a message via the Telegram Bot API, using
+`GRANDPA_TELEGRAM_BOT_TOKEN`/`GRANDPA_TELEGRAM_CHAT_ID` from `.env` as
+defaults: `telegram()->message('Deployed!')->send()`. Override the chat or
+topic per call with `->to($chatId)` / `->topic($topicId)`.
 
 ### Running a deploy
 
@@ -266,6 +281,7 @@ task('deploy', function () {
 });
 ```
 
+> [!NOTE]
 > `ftp()` talks to a plain FTP/FTPS server, which is what most shared hosts
 > provide. There's no SSH on this kind of host, so any "artisan migrate" or
 > "clear cache" step has to happen through an HTTP endpoint your app exposes
@@ -304,7 +320,8 @@ set up — there's no password field for it. Set up an SSH key with the host
 beforehand (`ssh-copy-id deploy@example.com`) and make sure `ssh deploy@example.com`
 works without a prompt before running `grandpa deploy`.
 
-> Note: Grandpa's built-in `ftp()` helper only speaks FTP/FTPS (via
+> [!NOTE]
+> Grandpa's built-in `ftp()` helper only speaks FTP/FTPS (via
 > `league/flysystem-ftp`), not SFTP. If your host only accepts SFTP and you
 > need actual file transfer (not just running commands over SSH), drive
 > `rsync`/`git pull` on the server through `ssh()->run()` instead of
@@ -313,6 +330,32 @@ works without a prompt before running `grandpa deploy`.
 > ```php
 > ssh()->run('cd /var/www/app && git pull --ff-only && php artisan migrate --force');
 > ```
+
+#### Notifying a Telegram chat after a deploy
+
+Report success or failure to a Telegram chat by wrapping the deploy in a
+try/catch and calling `telegram()`:
+
+```php
+<?php
+
+task('deploy', function () {
+    try {
+        $files = git()->changedFiles();
+
+        ftp()->upload($files);
+        ftp()->delete(git()->deletedFiles());
+
+        git()->saveRevision();
+
+        telegram()->message('Deploy succeeded for ' . git()->currentBranch())->send();
+    } catch (\Throwable $e) {
+        telegram()->message('Deploy failed: ' . $e->getMessage())->send();
+
+        throw $e;
+    }
+});
+```
 
 #### Updating every git repository under a base directory
 
@@ -345,7 +388,7 @@ task('git:update-all', function () {
 (e.g. filtering by branch name, or only reporting repos with changes)
 instead of a single fixed command.
 
-### Scheduling tasks
+## Scheduling tasks
 
 `task()` returns the `Task` instance, so you can chain Laravel-style schedule helpers
 onto it. Scheduled tasks invoked by name (`grandpa <task>`) only run when their
