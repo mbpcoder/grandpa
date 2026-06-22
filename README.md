@@ -83,6 +83,88 @@ composer deploy
 Both run the `deploy` task defined in the `runner.php`/`deploy.php` file found in the
 current working directory.
 
+### Recipes
+
+A few common deploy scenarios, ready to copy into `deploy.php`/`runner.php`.
+
+#### Shared hosting (cPanel / DirectAdmin) over FTP, with a cache-clear/health-check URL
+
+Most cPanel/DirectAdmin hosts only expose FTP/FTPS, not SSH. Upload the changed
+files, then hit a URL on the site itself (e.g. a route that clears cache or
+warms it up) to finish the deploy:
+
+```php
+<?php
+
+task('deploy', function () {
+    $files = git()->changedFiles();
+
+    ftp()->upload($files);
+    ftp()->delete(git()->deletedFiles());
+
+    git()->saveRevision();
+
+    // Hit a route on the live site to clear cache / warm up / health-check.
+    $response = file_get_contents('https://example.com/__deploy/clear-cache', false, stream_context_create([
+        'http' => ['timeout' => 15],
+    ]));
+
+    if ($response === false) {
+        throw new \RuntimeException('Cache clear request failed.');
+    }
+
+    say('Deployed and cache cleared: ' . $response);
+});
+```
+
+> `ftp()` talks to a plain FTP/FTPS server, which is what most shared hosts
+> provide. There's no SSH on this kind of host, so any "artisan migrate" or
+> "clear cache" step has to happen through an HTTP endpoint your app exposes
+> for that purpose (protect it with a secret token/header).
+
+#### VPS with SSH access, running commands after deploy
+
+If your host gives you SSH (a VPS, or cPanel/DirectAdmin with SSH enabled),
+upload over FTP as usual and then run commands on the server directly —
+no need for an HTTP endpoint:
+
+```php
+<?php
+
+task('deploy', function () {
+    $files = git()->changedFiles();
+
+    ftp()->upload($files);
+    ftp()->delete(git()->deletedFiles());
+
+    ftp()->purge('public/build');
+    ftp()->uploadDir('public/build');
+
+    git()->saveRevision();
+
+    ssh()->run('cd /var/www/app && composer install --no-dev && php artisan migrate --force');
+    ssh()->run('cd /var/www/app && php artisan optimize:clear && php artisan optimize');
+
+    say('Deployed');
+});
+```
+
+`ssh()->run()` shells out to the local `ssh` binary using `DEPLOY_SSH_HOST`
+(e.g. `deploy@example.com`), so it relies on your SSH key/agent already being
+set up — there's no password field for it. Set up an SSH key with the host
+beforehand (`ssh-copy-id deploy@example.com`) and make sure `ssh deploy@example.com`
+works without a prompt before running `grandpa deploy`.
+
+> Note: Grandpa's built-in `ftp()` helper only speaks FTP/FTPS (via
+> `league/flysystem-ftp`), not SFTP. If your host only accepts SFTP and you
+> need actual file transfer (not just running commands over SSH), drive
+> `rsync`/`git pull` on the server through `ssh()->run()` instead of
+> `ftp()->upload()`, for example:
+>
+> ```php
+> ssh()->run('cd /var/www/app && git pull --ff-only && php artisan migrate --force');
+> ```
+
 ### Scheduling tasks
 
 `task()` returns the `Task` instance, so you can chain Laravel-style schedule helpers
