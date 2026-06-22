@@ -6,12 +6,6 @@ namespace Grandpa;
 
 class Git
 {
-    private const REVISION_FILE = '.revision';
-
-    public function __construct(private readonly Storage $storage)
-    {
-    }
-
     public function pull(string|null $dir = null): array
     {
         return $this->exec($this->command('pull', $dir));
@@ -44,8 +38,6 @@ class Git
      */
     public function getChanges(string|null $revision = null): array
     {
-        $revision ??= $this->lastRevision();
-
         if ($revision === null) {
             return [
                 'added' => $this->exec('git ls-files'),
@@ -59,35 +51,19 @@ class Git
         ];
     }
 
-    public function changedFiles(): array
+    public function changedFiles(string|null $revision = null): array
     {
-        return $this->getChanges()['added'];
+        return $this->getChanges($revision)['added'];
     }
 
-    public function deletedFiles(): array
+    public function deletedFiles(string|null $revision = null): array
     {
-        return $this->getChanges()['deleted'];
+        return $this->getChanges($revision)['deleted'];
     }
 
     public function currentHead(): string
     {
         return trim((string) shell_exec('git rev-parse HEAD'));
-    }
-
-    public function lastRevision(): string|null
-    {
-        if (!$this->storage->exists(self::REVISION_FILE)) {
-            return null;
-        }
-
-        $revision = trim((string) $this->storage->get(self::REVISION_FILE));
-
-        return $revision === '' ? null : $revision;
-    }
-
-    public function saveRevision(): void
-    {
-        $this->storage->put(self::REVISION_FILE, $this->currentHead());
     }
 
     public function logs(int $limit = 10): array

@@ -212,10 +212,10 @@ class Init
         }
 
         if ($project['hasGit']) {
-            $lines[] = '    $files = git()->changedFiles();';
+            $lines[] = "    \$revision = storage()->ftp()->get('.revision');";
             $lines[] = '';
-            $lines[] = '    storage()->ftp()->upload($files);';
-            $lines[] = '    storage()->ftp()->delete(git()->deletedFiles());';
+            $lines[] = '    storage()->ftp()->upload(git()->changedFiles($revision));';
+            $lines[] = '    storage()->ftp()->delete(git()->deletedFiles($revision));';
         } else {
             $lines[] = "    storage()->ftp()->uploadDir('.');";
         }
@@ -228,7 +228,7 @@ class Init
 
         if ($project['hasGit']) {
             $lines[] = '';
-            $lines[] = '    git()->saveRevision();';
+            $lines[] = "    storage()->ftp()->put('.revision', git()->currentHead());";
         }
 
         $lines[] = '';

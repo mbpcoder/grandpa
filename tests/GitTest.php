@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Grandpa\Tests;
 
 use Grandpa\Git;
-use Grandpa\Storage;
 use PHPUnit\Framework\TestCase;
 
 final class GitTest extends TestCase
@@ -32,7 +31,7 @@ final class GitTest extends TestCase
 
     public function testIsRepositoryDetectsGitDirectory(): void
     {
-        $git = new Git($this->createMock(Storage::class));
+        $git = new Git();
 
         self::assertTrue($git->isRepository($this->repo));
         self::assertFalse($git->isRepository(sys_get_temp_dir()));
@@ -40,7 +39,7 @@ final class GitTest extends TestCase
 
     public function testCurrentBranchReturnsCheckedOutBranch(): void
     {
-        $git = new Git($this->createMock(Storage::class));
+        $git = new Git();
 
         self::assertSame('main', $git->currentBranch($this->repo));
     }

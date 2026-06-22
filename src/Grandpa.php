@@ -141,7 +141,7 @@ class Grandpa
 
     public function git(): Git
     {
-        return $this->git ??= new Git($this->storage()->default());
+        return $this->git ??= new Git();
     }
 }
 
@@ -164,9 +164,9 @@ class Grandpa
 //
 //// deploy via the task system
 //task('deploy', function () {
-//    $files = git()->changedFiles();
-//    storage()->ftp()->upload($files);
-//    storage()->ftp()->delete(git()->deletedFiles());
-//    git()->saveRevision();
+//    $revision = storage()->ftp()->get('.revision');
+//    storage()->ftp()->upload(git()->changedFiles($revision));
+//    storage()->ftp()->delete(git()->deletedFiles($revision));
+//    storage()->ftp()->put('.revision', git()->currentHead());
 //    say('Deployed');
 //});

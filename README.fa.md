@@ -125,10 +125,6 @@ composer install
    | مخزن GitLab | `storage()->gitlab()` | `GRANDPA_GITLAB_PROJECT_ID`، `GRANDPA_GITLAB_BRANCH`، `GRANDPA_GITLAB_BASE_URL`، `GRANDPA_GITLAB_TOKEN`، `GRANDPA_GITLAB_PATH` |
    | Google Drive | `storage()->googleDrive()` | `GRANDPA_GOOGLE_DRIVE_CLIENT_ID`، `GRANDPA_GOOGLE_DRIVE_CLIENT_SECRET`، `GRANDPA_GOOGLE_DRIVE_REFRESH_TOKEN`، `GRANDPA_GOOGLE_DRIVE_PATH` |
 
-   `storage()->default()` (که داخلی توسط `git()` برای ردیابی نسخه استفاده
-   می‌شود) بر اساس `GRANDPA_STORAGE_DRIVER` یک بک‌اند انتخاب می‌کند (پیش‌فرض
-   `ftp`؛ مقادیر `sftp`، `s3`، `gitlab`، `google-drive` نیز پذیرفته می‌شوند).
-
    > [!WARNING]
    > هرگز `.env` را کامیت نکنید — این فایل اطلاعات اعتباری FTP، SSH و تلگرام
    > شما را در خود دارد.
@@ -168,15 +164,15 @@ composer install
 <?php
 
 task('deploy', function () {
-    $files = git()->changedFiles();          // فایل‌های اضافه/تغییریافته از آخرین دیپلوی
+    $revision = storage()->ftp()->get('.revision');   // هش آخرین کامیت دیپلوی‌شده، یا null در اولین دیپلوی
 
-    storage()->ftp()->upload($files);                    // فقط فایل‌های تغییریافته را آپلود کن
-    storage()->ftp()->delete(git()->deletedFiles());    // فایل‌های حذف‌شده از git را حذف کن
+    storage()->ftp()->upload(git()->changedFiles($revision));    // آپلود فایل‌های اضافه/تغییریافته
+    storage()->ftp()->delete(git()->deletedFiles($revision));    // فایل‌های حذف‌شده از git را حذف کن
 
     storage()->ftp()->purge('public/build');             // یک پوشه‌ی ریموت را پاک کن
     storage()->ftp()->uploadDir('public/build');        // یک پوشه‌ی محلی کامل را آپلود کن (مثلاً اسکریپت‌های بیلدشده)
 
-    git()->saveRevision();                    // کامیت دیپلوی‌شده را روی سرور ثبت کن
+    storage()->ftp()->put('.revision', git()->currentHead());    // کامیت دیپلوی‌شده را روی سرور ثبت کن
 
     ssh()->run('cd /var/www/app && php artisan migrate --force && php artisan optimize');
 
@@ -186,15 +182,17 @@ task('deploy', function () {
 
 نحوه‌ی کار آپلود تدریجی:
 
-- Grandpa یک فایل `.revision` روی سرور ریموت نگه می‌دارد که حاوی هش آخرین
-  کامیت دیپلوی‌شده است.
-- `git()->changedFiles()` / `git()->deletedFiles()` با استفاده از
-  `git diff --name-only --diff-filter=ACMR|D <revision>..HEAD`، `HEAD` فعلی را
-  با آن نسخه مقایسه می‌کنند.
-- اگر هنوز `.revision` ریموتی وجود نداشته باشد، به‌عنوان اولین دیپلوی در نظر
-  گرفته می‌شود و همه‌ی فایل‌های ردیابی‌شده (`git ls-files`) آپلود می‌شوند.
-- `git()->saveRevision()` هش `HEAD` فعلی را در فایل `.revision` ریموت
-  می‌نویسد.
+- شما یک فایل `.revision` را از هرجا که ذخیره کرده‌اید (سرور ریموت، یک
+  پایگاه‌داده و غیره) می‌خوانید که حاوی هش آخرین کامیت دیپلوی‌شده است، و آن را
+  صریحاً به `git()` پاس می‌دهید.
+- `git()->changedFiles($revision)` / `git()->deletedFiles($revision)` با
+  استفاده از `git diff --name-only --diff-filter=ACMR|D <revision>..HEAD`،
+  `HEAD` فعلی را با آن نسخه مقایسه می‌کنند.
+- اگر `$revision` برابر `null` باشد (مثلاً فایل `.revision` هنوز وجود ندارد)،
+  همه‌ی فایل‌های ردیابی‌شده (`git ls-files`) به‌عنوان اضافه‌شده در نظر گرفته
+  می‌شوند — مفید برای اولین دیپلوی.
+- بعد از آپلود، `git()->currentHead()` را در فایل `.revision` خودتان بنویسید
+  تا دیپلوی بعدی بتواند با آن مقایسه کند.
 
 توابع کمکی موجود: `task()`، `git()`، `storage()`، `ssh()`، `http()`،
 `telegram()`، `say()`، `env()`.
@@ -309,12 +307,12 @@ SSH. فایل‌های تغییریافته را آپلود کنید، سپس ی
 <?php
 
 task('deploy', function () {
-    $files = git()->changedFiles();
+    $revision = storage()->ftp()->get('.revision');
 
-    storage()->ftp()->upload($files);
-    storage()->ftp()->delete(git()->deletedFiles());
+    storage()->ftp()->upload(git()->changedFiles($revision));
+    storage()->ftp()->delete(git()->deletedFiles($revision));
 
-    git()->saveRevision();
+    storage()->ftp()->put('.revision', git()->currentHead());
 
     // یک مسیر روی سایت زنده را برای پاک‌سازی کش / گرم‌کردن / بررسی سلامت فراخوانی کن.
     $response = http()->get('https://example.com/__deploy/clear-cache');
@@ -340,15 +338,15 @@ task('deploy', function () {
 <?php
 
 task('deploy', function () {
-    $files = git()->changedFiles();
+    $revision = storage()->ftp()->get('.revision');
 
-    storage()->ftp()->upload($files);
-    storage()->ftp()->delete(git()->deletedFiles());
+    storage()->ftp()->upload(git()->changedFiles($revision));
+    storage()->ftp()->delete(git()->deletedFiles($revision));
 
     storage()->ftp()->purge('public/build');
     storage()->ftp()->uploadDir('public/build');
 
-    git()->saveRevision();
+    storage()->ftp()->put('.revision', git()->currentHead());
 
     ssh()->run('cd /var/www/app && composer install --no-dev && php artisan migrate --force');
     ssh()->run('cd /var/www/app && php artisan optimize:clear && php artisan optimize');
@@ -379,12 +377,12 @@ task('deploy', function () {
 
 task('deploy', function () {
     try {
-        $files = git()->changedFiles();
+        $revision = storage()->ftp()->get('.revision');
 
-        storage()->ftp()->upload($files);
-        storage()->ftp()->delete(git()->deletedFiles());
+        storage()->ftp()->upload(git()->changedFiles($revision));
+        storage()->ftp()->delete(git()->deletedFiles($revision));
 
-        git()->saveRevision();
+        storage()->ftp()->put('.revision', git()->currentHead());
 
         telegram()->message('Deploy succeeded for ' . git()->currentBranch())->send();
     } catch (\Throwable $e) {

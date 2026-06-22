@@ -120,15 +120,4 @@ class StorageManager
             (string) env('GRANDPA_GOOGLE_DRIVE_PATH', ''),
         ));
     }
-
-    public function default(): Storage
-    {
-        return match ((string) env('GRANDPA_STORAGE_DRIVER', 'ftp')) {
-            'sftp' => $this->sftp(),
-            's3' => $this->s3(),
-            'gitlab' => $this->gitlab(),
-            'google-drive' => $this->googleDrive(),
-            default => $this->ftp(),
-        };
-    }
 }
