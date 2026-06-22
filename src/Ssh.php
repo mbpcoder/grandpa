@@ -6,13 +6,24 @@ namespace Grandpa;
 
 class Ssh
 {
-    public function __construct(private readonly string $host)
-    {
+    public function __construct(
+        private readonly string $host,
+        private readonly string $username = '',
+        private readonly string $password = '',
+        private readonly string $privateKey = '',
+        private readonly int $port = 22,
+    ) {
     }
 
     public static function fromEnv(): self
     {
-        return new self((string) env('GRANDPA_SSH_HOST', ''));
+        return new self(
+            (string) env('GRANDPA_SSH_HOST', ''),
+            (string) env('GRANDPA_SSH_USERNAME', ''),
+            (string) env('GRANDPA_SSH_PASSWORD', ''),
+            (string) env('GRANDPA_SSH_PRIVATE_KEY', ''),
+            (int) env('GRANDPA_SSH_PORT', 22),
+        );
     }
 
     public function run(string $command): string
@@ -21,7 +32,29 @@ class Ssh
             throw new \RuntimeException('GRANDPA_SSH_HOST is not configured.');
         }
 
-        $fullCommand = sprintf('ssh %s %s', escapeshellarg($this->host), escapeshellarg($command));
+        $target = $this->username !== '' ? "{$this->username}@{$this->host}" : $this->host;
+
+        $args = [];
+
+        if ($this->password !== '') {
+            $args[] = 'sshpass';
+            $args[] = '-p';
+            $args[] = escapeshellarg($this->password);
+        }
+
+        $args[] = 'ssh';
+        $args[] = '-p';
+        $args[] = escapeshellarg((string) $this->port);
+
+        if ($this->privateKey !== '') {
+            $args[] = '-i';
+            $args[] = escapeshellarg($this->privateKey);
+        }
+
+        $args[] = escapeshellarg($target);
+        $args[] = escapeshellarg($command);
+
+        $fullCommand = implode(' ', $args);
 
         $output = [];
         exec($fullCommand . ' 2>&1', $output, $exitCode);

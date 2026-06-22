@@ -172,7 +172,11 @@ used throughout the rest of this README.
    GRANDPA_FTP_PATH=/
    GRANDPA_FTP_PASSIVE=true
 
-   GRANDPA_SSH_HOST=user@example.com
+   GRANDPA_SSH_HOST=example.com
+   GRANDPA_SSH_USERNAME=
+   GRANDPA_SSH_PASSWORD=
+   GRANDPA_SSH_PRIVATE_KEY=
+   GRANDPA_SSH_PORT=22
 
    GRANDPA_TELEGRAM_BOT_TOKEN=
    GRANDPA_TELEGRAM_BASE_URL=https://api.telegram.org
@@ -181,7 +185,7 @@ used throughout the rest of this README.
    ```
 
    - `GRANDPA_FTP_PATH` is the remote base directory everything is uploaded relative to.
-   - `GRANDPA_SSH_HOST` is only used for running post-deploy commands over SSH (FTP can't run commands).
+   - `GRANDPA_SSH_HOST` is only used for running post-deploy commands over SSH (FTP can't run commands). Set `GRANDPA_SSH_USERNAME`/`GRANDPA_SSH_PRIVATE_KEY` to use a key, or `GRANDPA_SSH_USERNAME`/`GRANDPA_SSH_PASSWORD` to authenticate with a password instead (password auth requires `sshpass` to be installed).
    - `GRANDPA_TELEGRAM_*` vars are only needed if a task calls `telegram()` to send notifications.
    - Optionally require `vlucas/phpdotenv` (`composer require vlucas/phpdotenv`) for fuller `.env` parsing; Grandpa falls back to a built-in parser if it's not installed.
 
@@ -418,11 +422,14 @@ task('deploy', function () {
 });
 ```
 
-`ssh()->run()` shells out to the local `ssh` binary using `GRANDPA_SSH_HOST`
-(e.g. `deploy@example.com`), so it relies on your SSH key/agent already being
-set up — there's no password field for it. Set up an SSH key with the host
-beforehand (`ssh-copy-id deploy@example.com`) and make sure `ssh deploy@example.com`
-works without a prompt before running `grandpa deploy`.
+`ssh()->run()` shells out to the local `ssh` binary using `GRANDPA_SSH_HOST`,
+`GRANDPA_SSH_USERNAME` and `GRANDPA_SSH_PORT`. By default it relies on your
+SSH key/agent already being set up — set up an SSH key with the host
+beforehand (`ssh-copy-id user@example.com`) and make sure
+`ssh user@example.com` works without a prompt before running `grandpa deploy`,
+or point `GRANDPA_SSH_PRIVATE_KEY` at a specific key file. Alternatively, set
+`GRANDPA_SSH_PASSWORD` to authenticate with a password (this shells out to
+`sshpass`, which must be installed separately).
 
 > [!NOTE]
 > If your host only accepts SFTP, use `storage()->sftp()` instead of

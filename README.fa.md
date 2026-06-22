@@ -92,7 +92,11 @@ composer install
    GRANDPA_FTP_PATH=/
    GRANDPA_FTP_PASSIVE=true
 
-   GRANDPA_SSH_HOST=user@example.com
+   GRANDPA_SSH_HOST=example.com
+   GRANDPA_SSH_USERNAME=
+   GRANDPA_SSH_PASSWORD=
+   GRANDPA_SSH_PRIVATE_KEY=
+   GRANDPA_SSH_PORT=22
 
    GRANDPA_TELEGRAM_BOT_TOKEN=
    GRANDPA_TELEGRAM_BASE_URL=https://api.telegram.org
@@ -103,7 +107,10 @@ composer install
    - `GRANDPA_FTP_PATH` پوشه‌ی پایه‌ی ریموت است که همه‌چیز نسبت به آن آپلود
      می‌شود.
    - `GRANDPA_SSH_HOST` فقط برای اجرای دستورات پس از دیپلوی از طریق SSH استفاده
-     می‌شود (FTP نمی‌تواند دستور اجرا کند).
+     می‌شود (FTP نمی‌تواند دستور اجرا کند). با تنظیم `GRANDPA_SSH_USERNAME` و
+     `GRANDPA_SSH_PRIVATE_KEY` از کلید استفاده کنید، یا با تنظیم
+     `GRANDPA_SSH_USERNAME` و `GRANDPA_SSH_PASSWORD` با رمز عبور وارد شوید
+     (احراز هویت با رمز عبور به نصب `sshpass` نیاز دارد).
    - متغیرهای `GRANDPA_TELEGRAM_*` فقط زمانی لازم‌اند که یک وظیفه `telegram()`
      را برای ارسال اعلان فراخوانی کند.
    - به‌صورت اختیاری `vlucas/phpdotenv` را نصب کنید
@@ -355,12 +362,14 @@ task('deploy', function () {
 });
 ```
 
-`ssh()->run()` با استفاده از `GRANDPA_SSH_HOST` (مثلاً `deploy@example.com`)
-به فایل اجرایی محلی `ssh` فراخوانی می‌شود، پس به کلید/ایجنت SSH شما که از
-پیش راه‌اندازی شده وابسته است — هیچ فیلد رمز عبوری برای آن وجود ندارد. پیش
-از اجرای `grandpa deploy`، یک کلید SSH با هاست راه‌اندازی کنید
-(`ssh-copy-id deploy@example.com`) و مطمئن شوید
-`ssh deploy@example.com` بدون پرامپت کار می‌کند.
+`ssh()->run()` با استفاده از `GRANDPA_SSH_HOST`، `GRANDPA_SSH_USERNAME` و
+`GRANDPA_SSH_PORT` به فایل اجرایی محلی `ssh` فراخوانی می‌شود. به‌طور پیش‌فرض
+به کلید/ایجنت SSH شما که از پیش راه‌اندازی شده وابسته است — پیش از اجرای
+`grandpa deploy`، یک کلید SSH با هاست راه‌اندازی کنید
+(`ssh-copy-id user@example.com`) و مطمئن شوید `ssh user@example.com` بدون
+پرامپت کار می‌کند، یا با `GRANDPA_SSH_PRIVATE_KEY` به یک فایل کلید مشخص اشاره
+کنید. همچنین می‌توانید با تنظیم `GRANDPA_SSH_PASSWORD` با رمز عبور احراز هویت
+کنید (که به فایل اجرایی `sshpass` نیاز دارد و باید جداگانه نصب شود).
 
 > [!NOTE]
 > اگر هاست شما فقط SFTP را می‌پذیرد، به‌جای `storage()->ftp()` از
