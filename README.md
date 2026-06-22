@@ -59,6 +59,93 @@ config bin-dir --absolute` to find it) is on your shell's `PATH`. Once it is,
 every command in this README also works as plain `grandpa ...` instead of
 `php bin/grandpa ...`.
 
+### Without Composer: download the `.phar`
+
+If you don't want to add Grandpa as a Composer dependency, download the
+pre-built [`grandpa.phar`](https://raw.githubusercontent.com/mbpcoder/grandpa/claude/tender-davinci-rkpskn/grandpa.phar)
+and drop it into your project — it bundles all of Grandpa's dependencies, so
+it works standalone with just PHP:
+
+```
+curl -LO https://raw.githubusercontent.com/mbpcoder/grandpa/claude/tender-davinci-rkpskn/grandpa.phar
+chmod +x grandpa.phar
+php grandpa.phar deploy
+```
+
+#### Installing the `.phar` as a global `grandpa` command
+
+**Linux / macOS**
+
+Download it, make it executable, and move it onto your `PATH` (dropping the
+`.phar` extension so it reads as a normal command):
+
+```
+curl -LO https://raw.githubusercontent.com/mbpcoder/grandpa/claude/tender-davinci-rkpskn/grandpa.phar
+chmod +x grandpa.phar
+sudo mv grandpa.phar /usr/local/bin/grandpa
+```
+
+Now you can run `grandpa deploy` from anywhere.
+
+**Windows**
+
+Download `grandpa.phar` into a folder that's on your `PATH` (e.g.
+`C:\tools\grandpa\`), then create a `grandpa.bat` next to it so Windows knows
+how to execute the phar through PHP:
+
+```
+@echo off
+php "%~dp0grandpa.phar" %*
+```
+
+Save that as `C:\tools\grandpa\grandpa.bat`, add `C:\tools\grandpa` to your
+`PATH` environment variable, and `grandpa deploy` will work from any
+PowerShell or Command Prompt window.
+
+### Using Grandpa in a Laravel project
+
+Grandpa isn't Laravel-specific, but it's a natural fit for deploying one.
+Either way works:
+
+- **Composer (recommended for a repo you control):**
+  `composer require --dev mbpcoder/grandpa`, then run it with
+  `php vendor/bin/grandpa deploy`.
+- **`.phar` (no Composer footprint):** download `grandpa.phar` into the
+  project root (see above) and run `php grandpa.phar deploy`. Add
+  `/grandpa.phar` to `.gitignore` if you don't want to commit the binary.
+
+Then add a `deploy.php`/`runner.php` task that uploads the changed files and
+runs Artisan commands afterwards, e.g. over SSH:
+
+```php
+<?php
+
+task('deploy', function () {
+    $files = git()->changedFiles();
+
+    ftp()->upload($files);
+    ftp()->delete(git()->deletedFiles());
+
+    git()->saveRevision();
+
+    ssh()->run('cd /var/www/app && composer install --no-dev && php artisan migrate --force');
+    ssh()->run('cd /var/www/app && php artisan config:cache && php artisan optimize');
+
+    say('Deployed');
+});
+```
+
+If you're on shared hosting without SSH, swap the `ssh()->run(...)` calls for
+an `http()->get(...)` call to a protected route that runs those Artisan
+commands instead — see the
+[shared hosting recipe](#shared-hosting-cpanel-directadmin-over-ftp-with-a-cache-clear-health-check-url)
+below.
+
+You can also let Grandpa run Laravel's own scheduler for you instead of (or
+alongside) cron, by adding a task with `->everyMinute()` that runs
+`php artisan schedule:run`, then triggering Grandpa itself once a minute —
+see [Scheduling tasks](#-scheduling-tasks).
+
 ### Working on this repository directly
 
 If you're hacking on Grandpa itself (this repo), install dependencies with:

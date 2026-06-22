@@ -207,7 +207,7 @@ class Init
         ];
 
         if ($project['buildCommand'] !== null) {
-            $lines[] = '    passthru(' . var_export($project['buildCommand'], true) . ');';
+            $lines[] = '    run(' . var_export($project['buildCommand'], true) . ');';
             $lines[] = '';
         }
 
