@@ -27,6 +27,7 @@
     "bin/grandpa"
   ],
   "scripts": {
-    "deploy": "php bin/grandpa deploy"
+    "deploy": "php bin/grandpa deploy",
+    "schedule": "php bin/grandpa schedule:run"
   }
 }

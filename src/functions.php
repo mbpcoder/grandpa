@@ -7,11 +7,12 @@ use Grandpa\Git;
 use Grandpa\Grandpa;
 use Grandpa\Ssh;
 use Grandpa\Storage;
+use Grandpa\Task;
 
 if (!function_exists('task')) {
-    function task(string $name, Closure $callback): void
+    function task(string $name, Closure $callback): Task
     {
-        Grandpa::instance()->task($name, $callback);
+        return Grandpa::instance()->task($name, $callback);
     }
 }
 
