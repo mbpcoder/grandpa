@@ -9,6 +9,8 @@ class Task implements ITask
     private string|null $cronExpression = null;
     private int $retries = 1;
     private int $retryDelayMs = 0;
+    private int $repeatTimes = 1;
+    private int $repeatIntervalMs = 0;
 
     public function __construct(
         private readonly string $name,
@@ -32,7 +34,46 @@ class Task implements ITask
         return $this;
     }
 
+    /**
+     * Run the task $times times in total, waiting $intervalMs between each run.
+     * Unlike retry(), every run happens regardless of the previous run's outcome.
+     */
+    public function repeat(int $times, int $intervalMs = 0): static
+    {
+        $this->repeatTimes = max(1, $times);
+        $this->repeatIntervalMs = max(0, $intervalMs);
+
+        return $this;
+    }
+
     public function run(): void
+    {
+        if ($this->repeatTimes <= 1) {
+            $this->runAttempts();
+
+            return;
+        }
+
+        $failures = 0;
+
+        for ($run = 1; $run <= $this->repeatTimes; $run++) {
+            try {
+                $this->runAttempts();
+            } catch (\RuntimeException) {
+                $failures++;
+            }
+
+            if ($run < $this->repeatTimes && $this->repeatIntervalMs > 0) {
+                usleep($this->repeatIntervalMs * 1000);
+            }
+        }
+
+        if ($failures > 0) {
+            throw new \RuntimeException("Task \"{$this->name}\" failed {$failures} of {$this->repeatTimes} run(s).");
+        }
+    }
+
+    private function runAttempts(): void
     {
         for ($attempt = 1; $attempt <= $this->retries; $attempt++) {
             $status = ($this->callback)();

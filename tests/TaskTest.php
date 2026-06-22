@@ -99,6 +99,83 @@ final class TaskTest extends TestCase
         }
     }
 
+    public function testRunWithoutRepeatRunsOnce(): void
+    {
+        $calls = 0;
+        $task = new Task('demo', function () use (&$calls): void {
+            $calls++;
+        });
+
+        $task->run();
+
+        self::assertSame(1, $calls);
+    }
+
+    public function testRepeatRunsCallbackGivenNumberOfTimes(): void
+    {
+        $calls = 0;
+        $task = (new Task('demo', function () use (&$calls): void {
+            $calls++;
+        }))->repeat(3);
+
+        $task->run();
+
+        self::assertSame(3, $calls);
+    }
+
+    public function testRepeatRunsEveryTimeRegardlessOfOutcome(): void
+    {
+        $calls = 0;
+        $task = (new Task('demo', function () use (&$calls): TaskStatus {
+            $calls++;
+
+            return TaskStatus::Error;
+        }))->repeat(3);
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('Task "demo" failed 3 of 3 run(s).');
+
+        try {
+            $task->run();
+        } finally {
+            self::assertSame(3, $calls);
+        }
+    }
+
+    public function testRepeatContinuesPastAFailedRunAndReportsItAtTheEnd(): void
+    {
+        $calls = 0;
+        $task = (new Task('demo', function () use (&$calls): TaskStatus {
+            $calls++;
+
+            return $calls === 1 ? TaskStatus::Error : TaskStatus::Success;
+        }))->repeat(3);
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('Task "demo" failed 1 of 3 run(s).');
+
+        try {
+            $task->run();
+        } finally {
+            self::assertSame(3, $calls);
+        }
+    }
+
+    public function testRepeatCombinesWithRetryPerRun(): void
+    {
+        $calls = 0;
+        $task = (new Task('demo', function () use (&$calls): TaskStatus {
+            $calls++;
+
+            // Fails on the first attempt of every run, succeeds on the second.
+            return $calls % 2 === 1 ? TaskStatus::Error : TaskStatus::Success;
+        }))->retry(2)->repeat(3);
+
+        $task->run();
+
+        self::assertSame(6, $calls);
+    }
+
     public function testGetNameReturnsConstructedName(): void
     {
         $task = new Task('deploy', static function (): void {});

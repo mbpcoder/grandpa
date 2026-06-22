@@ -523,6 +523,33 @@ Available schedule helpers: `everyMinute()`, `everyTwoMinutes()`, `everyFiveMinu
 `monthlyOn(int $dayOfMonth, string $time)`, `yearly()`, or a raw `cron(string $expression)`
 for anything custom (standard 5-field cron syntax).
 
+## 🔁 Repeating and retrying tasks
+
+Chain `->repeat($times, $intervalMs)` onto a task to run it `$times` times in
+total, waiting `$intervalMs` between each run — every run happens regardless
+of the previous run's outcome:
+
+```php
+task('ping-health-check', function () {
+    http()->get('https://example.com/health');
+})->repeat(5, 10_000); // run 5 times, 10s apart
+```
+
+Chain `->retry($times, $delayMs)` instead to retry a single run on failure:
+return `TaskStatus::Error` from the callback (or throw) and the task is
+re-run up to `$times` attempts, waiting `$delayMs` between attempts, stopping
+early on the first success. Return `TaskStatus::Success` or nothing to mark
+the run as successful immediately.
+
+```php
+task('flaky-deploy', function () {
+    return deploy() ? TaskStatus::Success : TaskStatus::Error;
+})->retry(3, 500);
+```
+
+`retry()` and `repeat()` can be combined: each of the `repeat()` runs gets its
+own full set of `retry()` attempts.
+
 Run the scheduler once via:
 
 ```
