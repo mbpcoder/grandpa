@@ -13,6 +13,27 @@ task('deploy', function () {
     say('Deployed');
 });
 
+// Shows what `deploy` would upload/delete without touching the FTP server.
+task('deploy:dry-run', function () {
+    $uploaded = git()->changedFiles();
+    $deleted = git()->deletedFiles();
+
+    say('Dry run: nothing will be uploaded or deleted.');
+    say('');
+
+    say('Files to upload (' . count($uploaded) . '):');
+    foreach ($uploaded as $file) {
+        say("\033[32m+ {$file}\033[0m");
+    }
+
+    say('');
+
+    say('Files to delete (' . count($deleted) . '):');
+    foreach ($deleted as $file) {
+        say("\033[31m- {$file}\033[0m");
+    }
+});
+
 // Runs every minute when triggered via `php bin/grandpa schedule:run`
 // (typically from a single cron entry, like Laravel's scheduler).
 task('clear-cache', function () {
