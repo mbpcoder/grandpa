@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Grandpa\Tests;
 
 use Grandpa\Task;
+use Grandpa\TaskStatus;
 use PHPUnit\Framework\TestCase;
 
 final class TaskTest extends TestCase
@@ -19,6 +20,83 @@ final class TaskTest extends TestCase
         $task->run();
 
         self::assertTrue($called);
+    }
+
+    public function testRunDoesNotRetryWhenCallbackReturnsNothing(): void
+    {
+        $calls = 0;
+        $task = (new Task('demo', function () use (&$calls): void {
+            $calls++;
+        }))->retry(3);
+
+        $task->run();
+
+        self::assertSame(1, $calls);
+    }
+
+    public function testRunDoesNotRetryWhenCallbackReturnsSuccess(): void
+    {
+        $calls = 0;
+        $task = (new Task('demo', function () use (&$calls): TaskStatus {
+            $calls++;
+
+            return TaskStatus::Success;
+        }))->retry(3);
+
+        $task->run();
+
+        self::assertSame(1, $calls);
+    }
+
+    public function testRunRetriesUntilSuccess(): void
+    {
+        $calls = 0;
+        $task = (new Task('demo', function () use (&$calls): TaskStatus {
+            $calls++;
+
+            return $calls < 3 ? TaskStatus::Error : TaskStatus::Success;
+        }))->retry(5);
+
+        $task->run();
+
+        self::assertSame(3, $calls);
+    }
+
+    public function testRunThrowsAfterExhaustingRetriesOnError(): void
+    {
+        $calls = 0;
+        $task = (new Task('demo', function () use (&$calls): TaskStatus {
+            $calls++;
+
+            return TaskStatus::Error;
+        }))->retry(3);
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('Task "demo" failed after 3 attempt(s).');
+
+        try {
+            $task->run();
+        } finally {
+            self::assertSame(3, $calls);
+        }
+    }
+
+    public function testRunWithoutRetryDoesNotRetryOnError(): void
+    {
+        $calls = 0;
+        $task = new Task('demo', function () use (&$calls): TaskStatus {
+            $calls++;
+
+            return TaskStatus::Error;
+        });
+
+        $this->expectException(\RuntimeException::class);
+
+        try {
+            $task->run();
+        } finally {
+            self::assertSame(1, $calls);
+        }
     }
 
     public function testGetNameReturnsConstructedName(): void

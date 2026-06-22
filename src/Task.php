@@ -7,6 +7,8 @@ namespace Grandpa;
 class Task implements ITask
 {
     private string|null $cronExpression = null;
+    private int $retries = 1;
+    private int $retryDelayMs = 0;
 
     public function __construct(
         private readonly string $name,
@@ -19,9 +21,32 @@ class Task implements ITask
         return $this->name;
     }
 
+    /**
+     * Retry the task up to $times attempts, waiting $delayMs between them.
+     */
+    public function retry(int $times, int $delayMs = 0): static
+    {
+        $this->retries = max(1, $times);
+        $this->retryDelayMs = max(0, $delayMs);
+
+        return $this;
+    }
+
     public function run(): void
     {
-        ($this->callback)();
+        for ($attempt = 1; $attempt <= $this->retries; $attempt++) {
+            $status = ($this->callback)();
+
+            if ($status === null || $status === TaskStatus::Success) {
+                return;
+            }
+
+            if ($attempt < $this->retries && $this->retryDelayMs > 0) {
+                usleep($this->retryDelayMs * 1000);
+            }
+        }
+
+        throw new \RuntimeException("Task \"{$this->name}\" failed after {$this->retries} attempt(s).");
     }
 
     public function cron(string $expression): static
