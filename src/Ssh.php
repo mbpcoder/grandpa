@@ -44,16 +44,33 @@ class Ssh
         exec($fullCommand . ' 2>&1', $output, $exitCode);
         $result = implode("\n", $output);
 
-        if ($usePlink && stripos($result, 'host key is not cached') !== false) {
-            $trustCommand = "{$this->plinkPath} -ssh {$target}";
+        if ($usePlink) {
+            if (stripos($result, 'host key is not cached') !== false) {
+                $trustCommand = "{$this->plinkPath} -ssh {$target}";
 
-            throw new \RuntimeException(
-                "SSH command failed: {$command}\n{$result}\n\n"
-                . "WARNING: plink refused to connect because it does not yet trust this host's SSH key "
-                . "(this is a security check to prevent connecting to an impostor server).\n"
-                . "Run this command manually once and answer \"y\" to cache the host key, then re-run grandpa:\n"
-                . "  {$trustCommand}"
-            );
+                throw new \RuntimeException(
+                    "SSH command failed: {$command}\n{$result}\n\n"
+                    . "WARNING: plink refused to connect because it does not yet trust this host's SSH key "
+                    . "(this is a security check to prevent connecting to an impostor server).\n"
+                    . "Run this command manually once and answer \"y\" to cache the host key, then re-run grandpa:\n"
+                    . "  {$trustCommand}"
+                );
+            }
+
+            if (stripos($result, 'access denied') !== false) {
+                throw new \RuntimeException(
+                    "SSH command failed: {$command}\n{$result}\n\n"
+                    . "WARNING: plink was rejected by the server during authentication. "
+                    . "Check that GRANDPA_SSH_USERNAME and GRANDPA_SSH_PASSWORD are correct, "
+                    . "and that the account is allowed to log in over SSH."
+                );
+            }
+
+            foreach (['fatal error', 'connection abandoned', 'connection refused', 'network error'] as $marker) {
+                if (stripos($result, $marker) !== false) {
+                    throw new \RuntimeException("SSH command failed: {$command}\n{$result}");
+                }
+            }
         }
 
         if ($exitCode !== 0) {
