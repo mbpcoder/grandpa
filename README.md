@@ -1,5 +1,7 @@
 # 👴 Grandpa — a Pure PHP Deploy & Task Scheduler
 
+English | [فارسی](README.fa.md)
+
 Grandpa is a lightweight, dependency-light PHP build, deploy, and task
 scheduling tool for PHP projects. Think of it as a minimal alternative to
 [Deployer](https://deployer.org/) or [Envoy](https://laravel.com/docs/envoy):
