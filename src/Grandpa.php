@@ -11,6 +11,9 @@ class Grandpa
     /** @var array<string, Task> */
     private array $tasks = [];
 
+    private string|null $entryScript = null;
+    private string|null $taskFile = null;
+
     private Git|null $git = null;
     private StorageManager|null $storage = null;
     private Ssh|null $ssh = null;
@@ -47,6 +50,27 @@ class Grandpa
     public function getTask(string $name): Task|null
     {
         return $this->tasks[$name] ?? null;
+    }
+
+    public function setExecutionContext(string $entryScript, string $taskFile): void
+    {
+        $this->entryScript = $entryScript;
+        $this->taskFile = $taskFile;
+    }
+
+    /**
+     * Command to re-invoke this same CLI, as a single attempt of one task, in a
+     * separate process. Used by Task::asParallel() to run repeats concurrently.
+     *
+     * @return list<string>
+     */
+    public function buildSingleRunCommand(string $taskName): array
+    {
+        if ($this->entryScript === null || $this->taskFile === null) {
+            throw new \RuntimeException('Execution context is not available for parallel task runs.');
+        }
+
+        return [PHP_BINARY, $this->entryScript, '--file=' . $this->taskFile, $taskName, '--force', '--grandpa-single-run'];
     }
 
     public function runDueTasks(\DateTimeInterface|null $time = null): void

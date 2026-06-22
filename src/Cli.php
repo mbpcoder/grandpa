@@ -8,6 +8,8 @@ class Cli
 {
     public function run(array $argv): void
     {
+        $entryScript = $this->resolveEntryScript($argv[0] ?? '');
+
         [$positional, $options] = $this->parseArguments(array_slice($argv, 1));
 
         $first = $positional[0] ?? null;
@@ -55,10 +57,17 @@ class Cli
         }
 
         Env::load($cwd . '/.env');
+        Grandpa::instance()->setExecutionContext($entryScript, $taskFile);
 
         require $taskFile;
 
         try {
+            if (isset($options['single_run']) && $command !== null) {
+                $this->runSingleAttempt($command);
+
+                return;
+            }
+
             if ($command === null) {
                 Grandpa::instance()->runEligibleTasks();
 
@@ -96,6 +105,28 @@ class Cli
     }
 
     /**
+     * Internal entry point used by Task::asParallel()'s child processes:
+     * run a single attempt of one task, bypassing retry/repeat/parallel wrapping.
+     */
+    private function runSingleAttempt(string $name): void
+    {
+        $task = Grandpa::instance()->getTask($name);
+
+        if ($task === null) {
+            throw new \RuntimeException("Task \"{$name}\" is not defined.");
+        }
+
+        $task->runSingleAttempt();
+    }
+
+    private function resolveEntryScript(string $script): string
+    {
+        $resolved = realpath($script);
+
+        return $resolved !== false ? $resolved : $this->resolvePath($script, (string) getcwd());
+    }
+
+    /**
      * @param list<string> $arguments
      * @return array{0: list<string>, 1: array<string, string|true>}
      */
@@ -107,6 +138,8 @@ class Cli
         foreach ($arguments as $argument) {
             if ($argument === '--force' || $argument === '-f') {
                 $options['force'] = true;
+            } elseif ($argument === '--grandpa-single-run') {
+                $options['single_run'] = true;
             } elseif (str_starts_with($argument, '--file=')) {
                 $options['file'] = substr($argument, strlen('--file='));
             } elseif (str_starts_with($argument, '--dir=')) {

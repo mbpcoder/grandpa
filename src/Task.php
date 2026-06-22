@@ -11,6 +11,7 @@ class Task implements ITask
     private int $retryDelayMs = 0;
     private int $repeatTimes = 1;
     private int $repeatIntervalMs = 0;
+    private int|null $maxParallel = null;
 
     public function __construct(
         private readonly string $name,
@@ -46,10 +47,28 @@ class Task implements ITask
         return $this;
     }
 
+    /**
+     * Run repeat() runs concurrently, in separate processes, instead of one after
+     * another. $maxConcurrent caps how many run at once; 0 means run them all at
+     * once. Only takes effect when combined with repeat() for more than one run.
+     */
+    public function asParallel(int $maxConcurrent = 0): static
+    {
+        $this->maxParallel = max(0, $maxConcurrent);
+
+        return $this;
+    }
+
     public function run(): void
     {
         if ($this->repeatTimes <= 1) {
             $this->runAttempts();
+
+            return;
+        }
+
+        if ($this->maxParallel !== null) {
+            $this->runParallel();
 
             return;
         }
@@ -70,6 +89,71 @@ class Task implements ITask
 
         if ($failures > 0) {
             throw new \RuntimeException("Task \"{$this->name}\" failed {$failures} of {$this->repeatTimes} run(s).");
+        }
+    }
+
+    /**
+     * Run exactly one retry-attempt-set of this task. Used by the child process
+     * spawned per repeat when running with asParallel().
+     */
+    public function runSingleAttempt(): void
+    {
+        $this->runAttempts();
+    }
+
+    private function runParallel(): void
+    {
+        if ($this->repeatIntervalMs > 0) {
+            Grandpa::instance()->console()->warning(
+                "Task \"{$this->name}\" ignores its repeat interval while running in parallel.",
+            );
+        }
+
+        $command = Grandpa::instance()->buildSingleRunCommand($this->name);
+        $concurrency = $this->maxParallel > 0 ? min($this->maxParallel, $this->repeatTimes) : $this->repeatTimes;
+
+        $pending = $this->repeatTimes;
+        $running = [];
+        $failures = 0;
+
+        while ($pending > 0 || $running !== []) {
+            while ($pending > 0 && count($running) < $concurrency) {
+                $process = proc_open($command, [0 => ['pipe', 'r'], 1 => STDOUT, 2 => STDERR], $pipes);
+
+                if ($process === false) {
+                    $failures++;
+                    $pending--;
+
+                    continue;
+                }
+
+                fclose($pipes[0]);
+                $running[] = $process;
+                $pending--;
+            }
+
+            foreach ($running as $index => $process) {
+                $status = proc_get_status($process);
+
+                if ($status['running']) {
+                    continue;
+                }
+
+                if ($status['exitcode'] !== 0) {
+                    $failures++;
+                }
+
+                proc_close($process);
+                unset($running[$index]);
+            }
+
+            if ($running !== []) {
+                usleep(20_000);
+            }
+        }
+
+        if ($failures > 0) {
+            throw new \RuntimeException("Task \"{$this->name}\" failed {$failures} of {$this->repeatTimes} parallel run(s).");
         }
     }
 
