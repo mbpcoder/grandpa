@@ -157,6 +157,22 @@ composer install
 and run the binary straight out of the repo with `php bin/grandpa ...`, as
 used throughout the rest of this README.
 
+#### Building `grandpa.phar`
+
+`build-phar.php` packages `src/`, `vendor/`, and `bin/grandpa` into a single
+`grandpa.phar` at the repo root (the same file downloaded in the
+[Without Composer](#without-composer-download-the-phar) section above).
+
+PHP's `Phar` extension blocks writing `.phar` files unless `phar.readonly` is
+turned off, so build it with:
+
+```
+php -d phar.readonly=0 build-phar.php
+```
+
+This regenerates `grandpa.phar` in the project root. Run `php grandpa.phar deploy`
+(or any other task) to confirm it works before publishing/uploading it.
+
 ## 🚀 Deploy
 
 ### Setup
