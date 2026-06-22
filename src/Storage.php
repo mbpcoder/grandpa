@@ -226,6 +226,13 @@ class Storage
 
     private function filesystem(): FilesystemOperator
     {
+        if (!extension_loaded('ftp')) {
+            throw new \RuntimeException(
+                'The PHP "ftp" extension is required for FTP deployment but is not enabled. '
+                . 'Enable it in your php.ini (extension=ftp) and restart, then try again.'
+            );
+        }
+
         return $this->filesystem ??= new Filesystem(new FtpAdapter(
             FtpConnectionOptions::fromArray([
                 'host' => $this->host,
