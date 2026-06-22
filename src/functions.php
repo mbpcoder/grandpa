@@ -46,6 +46,13 @@ if (!function_exists('http')) {
     }
 }
 
+if (!function_exists('run')) {
+    function run(string $command): void
+    {
+        passthru($command);
+    }
+}
+
 if (!function_exists('say')) {
     function say(string $message): void
     {
