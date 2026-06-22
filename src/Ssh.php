@@ -12,6 +12,7 @@ class Ssh
         private readonly string $password = '',
         private readonly string $privateKey = '',
         private readonly int $port = 22,
+        private readonly string $plinkPath = '',
     ) {
     }
 
@@ -23,6 +24,7 @@ class Ssh
             (string) env('GRANDPA_SSH_PASSWORD', ''),
             (string) env('GRANDPA_SSH_PRIVATE_KEY', ''),
             (int) env('GRANDPA_SSH_PORT', 22),
+            (string) env('GRANDPA_PLINK_PATH', ''),
         );
     }
 
@@ -34,27 +36,7 @@ class Ssh
 
         $target = $this->username !== '' ? "{$this->username}@{$this->host}" : $this->host;
 
-        $args = [];
-
-        if ($this->password !== '' && \PHP_OS_FAMILY !== 'Windows') {
-            $args[] = 'sshpass';
-            $args[] = '-p';
-            $args[] = escapeshellarg($this->password);
-        }
-
-        $args[] = 'ssh';
-        $args[] = '-p';
-        $args[] = escapeshellarg((string) $this->port);
-
-        if ($this->privateKey !== '') {
-            $args[] = '-i';
-            $args[] = escapeshellarg($this->privateKey);
-        }
-
-        $args[] = escapeshellarg($target);
-        $args[] = escapeshellarg($command);
-
-        $fullCommand = implode(' ', $args);
+        $fullCommand = implode(' ', $this->buildArgs($target, $command));
 
         $output = [];
         exec($fullCommand . ' 2>&1', $output, $exitCode);
@@ -69,5 +51,41 @@ class Ssh
         }
 
         return $result;
+    }
+
+    private function buildArgs(string $target, string $command): array
+    {
+        $usePlink = $this->password !== '' && \PHP_OS_FAMILY === 'Windows' && $this->plinkPath !== '';
+
+        if ($usePlink) {
+            $args = [
+                escapeshellarg($this->plinkPath),
+                '-ssh',
+                '-P', escapeshellarg((string) $this->port),
+                '-pw', escapeshellarg($this->password),
+            ];
+        } else {
+            $args = [];
+
+            if ($this->password !== '' && \PHP_OS_FAMILY !== 'Windows') {
+                $args[] = 'sshpass';
+                $args[] = '-p';
+                $args[] = escapeshellarg($this->password);
+            }
+
+            $args[] = 'ssh';
+            $args[] = '-p';
+            $args[] = escapeshellarg((string) $this->port);
+        }
+
+        if ($this->privateKey !== '') {
+            $args[] = '-i';
+            $args[] = escapeshellarg($this->privateKey);
+        }
+
+        $args[] = escapeshellarg($target);
+        $args[] = escapeshellarg($command);
+
+        return $args;
     }
 }
