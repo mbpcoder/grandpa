@@ -1,0 +1,19 @@
+<?php
+
+declare(strict_types=1);
+
+task('deploy', function () {
+    $files = git()->changedFiles();
+
+    ftp()->upload($files);
+    ftp()->delete(git()->deletedFiles());
+
+    ftp()->purge('public/build');
+    ftp()->uploadDir('public/build');
+
+    git()->saveRevision();
+
+    ssh()->run('cd /var/www/app && php artisan migrate --force && php artisan optimize');
+
+    say('Deployed');
+});
