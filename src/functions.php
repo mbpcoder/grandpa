@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Grandpa\Console;
 use Grandpa\Env;
 use Grandpa\Git;
 use Grandpa\Grandpa;
@@ -54,9 +55,9 @@ if (!function_exists('run')) {
 }
 
 if (!function_exists('say')) {
-    function say(string $message): void
+    function say(string|null $message = null): Console|null
     {
-        Grandpa::instance()->say($message);
+        return Grandpa::instance()->say($message);
     }
 }
 

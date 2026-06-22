@@ -15,6 +15,7 @@ class Grandpa
     private StorageManager|null $storage = null;
     private Ssh|null $ssh = null;
     private Http|null $http = null;
+    private Console|null $console = null;
 
     private $sass;
 
@@ -134,9 +135,20 @@ class Grandpa
         return $this;
     }
 
-    public function say(string $message): void
+    public function say(string|null $message = null): Console|null
     {
-        echo $message . PHP_EOL;
+        if ($message === null) {
+            return $this->console();
+        }
+
+        $this->console()->say($message);
+
+        return null;
+    }
+
+    public function console(): Console
+    {
+        return $this->console ??= new Console();
     }
 
     public function git(): Git
