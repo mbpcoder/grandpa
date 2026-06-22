@@ -37,6 +37,12 @@ class Grandpa
         $this->tasks[$name]->run();
     }
 
+    /** @return list<string> */
+    public function getTaskNames(): array
+    {
+        return array_keys($this->tasks);
+    }
+
     public function runDueTasks(\DateTimeInterface|null $time = null): void
     {
         foreach ($this->tasks as $task) {

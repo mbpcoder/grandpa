@@ -114,6 +114,19 @@ composer deploy
 Both run the `deploy` task defined in the `runner.php`/`deploy.php` file found in the
 current working directory.
 
+You can also point at a task file explicitly, similar to how PHPUnit takes a test
+file:
+
+```
+php bin/grandpa runner.php deploy
+```
+
+Running it without a task name lists the tasks defined in that file:
+
+```
+php bin/grandpa runner.php
+```
+
 ### Recipes
 
 A few common deploy scenarios, ready to copy into `deploy.php`/`runner.php`.
