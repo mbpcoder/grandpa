@@ -40,6 +40,30 @@ final class FunctionsTest extends TestCase
         self::assertSame('fallback', env('SOME_UNDEFINED_KEY', 'fallback'));
     }
 
+    public function testSubDirectoriesReturnsOnlyImmediateDirectories(): void
+    {
+        $base = sys_get_temp_dir() . '/grandpa-subdirs-' . uniqid();
+        mkdir($base . '/one', recursive: true);
+        mkdir($base . '/two', recursive: true);
+        touch($base . '/file.txt');
+
+        $directories = subDirectories($base);
+
+        self::assertSame([$base . '/one', $base . '/two'], $directories);
+
+        $this->removeDirectory($base);
+    }
+
+    private function removeDirectory(string $path): void
+    {
+        foreach (array_diff(scandir($path) ?: [], ['.', '..']) as $entry) {
+            $entryPath = $path . '/' . $entry;
+            is_dir($entryPath) ? $this->removeDirectory($entryPath) : unlink($entryPath);
+        }
+
+        rmdir($path);
+    }
+
     private function resetSingleton(): void
     {
         $property = new \ReflectionProperty(Grandpa::class, 'instance');

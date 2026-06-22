@@ -12,14 +12,26 @@ class Git
     {
     }
 
-    public function pull(): void
+    public function pull(string|null $dir = null): array
     {
-        $this->exec('git pull');
+        return $this->exec($this->command('pull', $dir));
     }
 
     public function push(): void
     {
         $this->exec('git push');
+    }
+
+    public function isRepository(string $dir): bool
+    {
+        return is_dir($dir . '/.git');
+    }
+
+    public function currentBranch(string|null $dir = null): string
+    {
+        $output = $this->exec($this->command('rev-parse --abbrev-ref HEAD', $dir));
+
+        return $output[0] ?? '';
     }
 
     public function commit(string $message): void
@@ -81,6 +93,11 @@ class Git
     public function logs(int $limit = 10): array
     {
         return $this->exec(sprintf('git log -%d --oneline', $limit));
+    }
+
+    private function command(string $args, string|null $dir): string
+    {
+        return $dir === null ? "git {$args}" : 'git -C ' . escapeshellarg($dir) . " {$args}";
     }
 
     /**

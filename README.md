@@ -314,6 +314,37 @@ works without a prompt before running `grandpa deploy`.
 > ssh()->run('cd /var/www/app && git pull --ff-only && php artisan migrate --force');
 > ```
 
+#### Updating every git repository under a base directory
+
+If you keep several projects checked out side by side, walk one level of
+subdirectories with `subDirectories()`, skip anything that isn't a git
+repository with `git()->isRepository()`, and report the branch plus the
+files `git pull` changed for each:
+
+```php
+<?php
+
+task('git:update-all', function () {
+    foreach (subDirectories('/var/www/projects') as $dir) {
+        if (!git()->isRepository($dir)) {
+            continue;
+        }
+
+        say($dir);
+        say('  branch: ' . git()->currentBranch($dir));
+
+        foreach (git()->pull($dir) as $line) {
+            say('  ' . $line);
+        }
+    }
+});
+```
+
+`subDirectories()`, `git()->isRepository()`, `git()->currentBranch()` and
+`git()->pull()` are plain helpers you can recombine for similar scripts
+(e.g. filtering by branch name, or only reporting repos with changes)
+instead of a single fixed command.
+
 ### Scheduling tasks
 
 `task()` returns the `Task` instance, so you can chain Laravel-style schedule helpers
