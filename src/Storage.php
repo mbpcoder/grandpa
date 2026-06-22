@@ -4,13 +4,15 @@ declare(strict_types=1);
 
 namespace Grandpa;
 
-use League\Flysystem\Adapter\Ftp;
 use League\Flysystem\Filesystem;
-use League\Flysystem\FilesystemInterface;
+use League\Flysystem\FilesystemOperator;
+use League\Flysystem\Ftp\FtpAdapter;
+use League\Flysystem\Ftp\FtpConnectionOptions;
+use League\Flysystem\StorageAttributes;
 
 class Storage
 {
-    private FilesystemInterface|null $filesystem = null;
+    private FilesystemOperator|null $filesystem = null;
 
     public function __construct(
         private readonly string $host,
@@ -36,39 +38,59 @@ class Storage
 
     public function exists(string $path): bool
     {
-        return $this->filesystem()->has($path);
+        return $this->filesystem()->fileExists($path);
     }
 
     public function get(string $path): string|null
     {
-        $contents = $this->filesystem()->read($path);
-
-        return $contents === false ? null : $contents;
+        try {
+            return $this->filesystem()->read($path);
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     public function put(string $path, string $contents): bool
     {
-        return $this->filesystem()->put($path, $contents);
+        try {
+            $this->filesystem()->write($path, $contents);
+
+            return true;
+        } catch (\Throwable) {
+            return false;
+        }
     }
 
     public function size(string $path): int
     {
-        return (int) $this->filesystem()->getSize($path);
+        return $this->filesystem()->fileSize($path);
     }
 
     public function lastModified(string $path): int
     {
-        return (int) $this->filesystem()->getTimestamp($path);
+        return $this->filesystem()->lastModified($path);
     }
 
     public function copy(string $from, string $to): bool
     {
-        return $this->filesystem()->copy($from, $to);
+        try {
+            $this->filesystem()->copy($from, $to);
+
+            return true;
+        } catch (\Throwable) {
+            return false;
+        }
     }
 
     public function move(string $from, string $to): bool
     {
-        return $this->filesystem()->rename($from, $to);
+        try {
+            $this->filesystem()->move($from, $to);
+
+            return true;
+        } catch (\Throwable) {
+            return false;
+        }
     }
 
     /**
@@ -95,7 +117,7 @@ class Storage
     {
         foreach ($files as $file) {
             $stream = fopen($file, 'r');
-            $this->filesystem()->putStream($file, $stream);
+            $this->filesystem()->writeStream($file, $stream);
             fclose($stream);
         }
     }
@@ -125,7 +147,7 @@ class Storage
             }
 
             $stream = fopen($fileInfo->getPathname(), 'r');
-            $this->filesystem()->putStream($remotePath, $stream);
+            $this->filesystem()->writeStream($remotePath, $stream);
             fclose($stream);
         }
     }
@@ -136,19 +158,19 @@ class Storage
      */
     public function purge(string $directory): void
     {
-        $contents = $this->filesystem()->listContents($directory, true);
+        $contents = iterator_to_array($this->filesystem()->listContents($directory, true));
 
         foreach ($contents as $item) {
-            if ($item['type'] === 'file') {
-                $this->filesystem()->delete($item['path']);
+            if ($item->isFile()) {
+                $this->filesystem()->delete($item->path());
             }
         }
 
-        $directories = array_filter($contents, static fn (array $item): bool => $item['type'] === 'dir');
-        usort($directories, static fn (array $a, array $b): int => strlen($b['path']) - strlen($a['path']));
+        $directories = array_filter($contents, static fn (StorageAttributes $item): bool => $item->isDir());
+        usort($directories, static fn (StorageAttributes $a, StorageAttributes $b): int => strlen($b->path()) - strlen($a->path()));
 
         foreach ($directories as $dir) {
-            $this->filesystem()->deleteDir($dir['path']);
+            $this->filesystem()->deleteDirectory($dir->path());
         }
     }
 
@@ -169,12 +191,24 @@ class Storage
 
     public function makeDirectory(string $directory): bool
     {
-        return $this->filesystem()->createDir($directory);
+        try {
+            $this->filesystem()->createDirectory($directory);
+
+            return true;
+        } catch (\Throwable) {
+            return false;
+        }
     }
 
     public function deleteDirectory(string $directory): bool
     {
-        return $this->filesystem()->deleteDir($directory);
+        try {
+            $this->filesystem()->deleteDirectory($directory);
+
+            return true;
+        } catch (\Throwable) {
+            return false;
+        }
     }
 
     /**
@@ -183,25 +217,27 @@ class Storage
     private function listPaths(string $directory, bool $recursive, string $type): array
     {
         $items = array_filter(
-            $this->filesystem()->listContents($directory, $recursive),
-            static fn (array $item): bool => $item['type'] === $type,
+            iterator_to_array($this->filesystem()->listContents($directory, $recursive)),
+            static fn (StorageAttributes $item): bool => $item->type() === $type,
         );
 
-        return array_values(array_map(static fn (array $item): string => $item['path'], $items));
+        return array_values(array_map(static fn (StorageAttributes $item): string => $item->path(), $items));
     }
 
-    private function filesystem(): FilesystemInterface
+    private function filesystem(): FilesystemOperator
     {
-        return $this->filesystem ??= new Filesystem(new Ftp([
-            'host' => $this->host,
-            'username' => $this->username,
-            'password' => $this->password,
-            'port' => $this->port,
-            'root' => $this->root,
-            'passive' => $this->passive,
-            'ssl' => false,
-            'timeout' => 30,
-        ]));
+        return $this->filesystem ??= new Filesystem(new FtpAdapter(
+            FtpConnectionOptions::fromArray([
+                'host' => $this->host,
+                'username' => $this->username,
+                'password' => $this->password,
+                'port' => $this->port,
+                'root' => $this->root,
+                'passive' => $this->passive,
+                'ssl' => false,
+                'timeout' => 30,
+            ]),
+        ));
     }
 
     public function __destruct()
