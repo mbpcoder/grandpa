@@ -165,14 +165,14 @@ used throughout the rest of this README.
 2. Copy `.env.example` to `.env` and fill in your credentials.
 
    ```
-   DEPLOY_FTP_HOST=ftp.example.com
-   DEPLOY_FTP_USERNAME=
-   DEPLOY_FTP_PASSWORD=
-   DEPLOY_FTP_PORT=21
-   DEPLOY_FTP_PATH=/
-   DEPLOY_FTP_PASSIVE=true
+   GRANDPA_FTP_HOST=ftp.example.com
+   GRANDPA_FTP_USERNAME=
+   GRANDPA_FTP_PASSWORD=
+   GRANDPA_FTP_PORT=21
+   GRANDPA_FTP_PATH=/
+   GRANDPA_FTP_PASSIVE=true
 
-   DEPLOY_SSH_HOST=user@example.com
+   GRANDPA_SSH_HOST=user@example.com
 
    GRANDPA_TELEGRAM_BOT_TOKEN=
    GRANDPA_TELEGRAM_BASE_URL=https://api.telegram.org
@@ -180,8 +180,8 @@ used throughout the rest of this README.
    GRANDPA_TELEGRAM_TOPIC_ID=
    ```
 
-   - `DEPLOY_FTP_PATH` is the remote base directory everything is uploaded relative to.
-   - `DEPLOY_SSH_HOST` is only used for running post-deploy commands over SSH (FTP can't run commands).
+   - `GRANDPA_FTP_PATH` is the remote base directory everything is uploaded relative to.
+   - `GRANDPA_SSH_HOST` is only used for running post-deploy commands over SSH (FTP can't run commands).
    - `GRANDPA_TELEGRAM_*` vars are only needed if a task calls `telegram()` to send notifications.
    - Optionally require `vlucas/phpdotenv` (`composer require vlucas/phpdotenv`) for fuller `.env` parsing; Grandpa falls back to a built-in parser if it's not installed.
 
@@ -401,7 +401,7 @@ task('deploy', function () {
 });
 ```
 
-`ssh()->run()` shells out to the local `ssh` binary using `DEPLOY_SSH_HOST`
+`ssh()->run()` shells out to the local `ssh` binary using `GRANDPA_SSH_HOST`
 (e.g. `deploy@example.com`), so it relies on your SSH key/agent already being
 set up — there's no password field for it. Set up an SSH key with the host
 beforehand (`ssh-copy-id deploy@example.com`) and make sure `ssh deploy@example.com`

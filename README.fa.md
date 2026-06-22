@@ -85,14 +85,14 @@ composer install
    کنید.
 
    ```
-   DEPLOY_FTP_HOST=ftp.example.com
-   DEPLOY_FTP_USERNAME=
-   DEPLOY_FTP_PASSWORD=
-   DEPLOY_FTP_PORT=21
-   DEPLOY_FTP_PATH=/
-   DEPLOY_FTP_PASSIVE=true
+   GRANDPA_FTP_HOST=ftp.example.com
+   GRANDPA_FTP_USERNAME=
+   GRANDPA_FTP_PASSWORD=
+   GRANDPA_FTP_PORT=21
+   GRANDPA_FTP_PATH=/
+   GRANDPA_FTP_PASSIVE=true
 
-   DEPLOY_SSH_HOST=user@example.com
+   GRANDPA_SSH_HOST=user@example.com
 
    GRANDPA_TELEGRAM_BOT_TOKEN=
    GRANDPA_TELEGRAM_BASE_URL=https://api.telegram.org
@@ -100,9 +100,9 @@ composer install
    GRANDPA_TELEGRAM_TOPIC_ID=
    ```
 
-   - `DEPLOY_FTP_PATH` پوشه‌ی پایه‌ی ریموت است که همه‌چیز نسبت به آن آپلود
+   - `GRANDPA_FTP_PATH` پوشه‌ی پایه‌ی ریموت است که همه‌چیز نسبت به آن آپلود
      می‌شود.
-   - `DEPLOY_SSH_HOST` فقط برای اجرای دستورات پس از دیپلوی از طریق SSH استفاده
+   - `GRANDPA_SSH_HOST` فقط برای اجرای دستورات پس از دیپلوی از طریق SSH استفاده
      می‌شود (FTP نمی‌تواند دستور اجرا کند).
    - متغیرهای `GRANDPA_TELEGRAM_*` فقط زمانی لازم‌اند که یک وظیفه `telegram()`
      را برای ارسال اعلان فراخوانی کند.
@@ -338,7 +338,7 @@ task('deploy', function () {
 });
 ```
 
-`ssh()->run()` با استفاده از `DEPLOY_SSH_HOST` (مثلاً `deploy@example.com`)
+`ssh()->run()` با استفاده از `GRANDPA_SSH_HOST` (مثلاً `deploy@example.com`)
 به فایل اجرایی محلی `ssh` فراخوانی می‌شود، پس به کلید/ایجنت SSH شما که از
 پیش راه‌اندازی شده وابسته است — هیچ فیلد رمز عبوری برای آن وجود ندارد. پیش
 از اجرای `grandpa deploy`، یک کلید SSH با هاست راه‌اندازی کنید

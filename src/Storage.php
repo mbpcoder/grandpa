@@ -27,12 +27,12 @@ class Storage
     public static function fromEnv(): self
     {
         return new self(
-            host: (string) env('DEPLOY_FTP_HOST', ''),
-            username: (string) env('DEPLOY_FTP_USERNAME', ''),
-            password: (string) env('DEPLOY_FTP_PASSWORD', ''),
-            port: (int) env('DEPLOY_FTP_PORT', 21),
-            root: (string) env('DEPLOY_FTP_PATH', ''),
-            passive: filter_var(env('DEPLOY_FTP_PASSIVE', true), FILTER_VALIDATE_BOOLEAN),
+            host: (string) env('GRANDPA_FTP_HOST', ''),
+            username: (string) env('GRANDPA_FTP_USERNAME', ''),
+            password: (string) env('GRANDPA_FTP_PASSWORD', ''),
+            port: (int) env('GRANDPA_FTP_PORT', 21),
+            root: (string) env('GRANDPA_FTP_PATH', ''),
+            passive: filter_var(env('GRANDPA_FTP_PASSIVE', true), FILTER_VALIDATE_BOOLEAN),
         );
     }
 

@@ -12,13 +12,13 @@ class Ssh
 
     public static function fromEnv(): self
     {
-        return new self((string) env('DEPLOY_SSH_HOST', ''));
+        return new self((string) env('GRANDPA_SSH_HOST', ''));
     }
 
     public function run(string $command): string
     {
         if ($this->host === '') {
-            throw new \RuntimeException('DEPLOY_SSH_HOST is not configured.');
+            throw new \RuntimeException('GRANDPA_SSH_HOST is not configured.');
         }
 
         $fullCommand = sprintf('ssh %s %s', escapeshellarg($this->host), escapeshellarg($command));

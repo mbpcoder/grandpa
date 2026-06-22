@@ -177,14 +177,14 @@ class Init
         }
 
         $lines = [
-            'DEPLOY_FTP_HOST=' . $answers['ftpHost'],
-            'DEPLOY_FTP_USERNAME=' . $answers['ftpUser'],
-            'DEPLOY_FTP_PASSWORD=' . $answers['ftpPass'],
-            'DEPLOY_FTP_PORT=' . $answers['ftpPort'],
-            'DEPLOY_FTP_PATH=' . $answers['ftpPath'],
-            'DEPLOY_FTP_PASSIVE=true',
+            'GRANDPA_FTP_HOST=' . $answers['ftpHost'],
+            'GRANDPA_FTP_USERNAME=' . $answers['ftpUser'],
+            'GRANDPA_FTP_PASSWORD=' . $answers['ftpPass'],
+            'GRANDPA_FTP_PORT=' . $answers['ftpPort'],
+            'GRANDPA_FTP_PATH=' . $answers['ftpPath'],
+            'GRANDPA_FTP_PASSIVE=true',
             '',
-            'DEPLOY_SSH_HOST=' . $answers['sshHost'],
+            'GRANDPA_SSH_HOST=' . $answers['sshHost'],
             '',
         ];
 
