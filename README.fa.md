@@ -2,6 +2,10 @@
 
 # 👴 Grandpa — یک ابزار ساده‌ی PHP برای دیپلوی و زمان‌بندی وظایف
 
+[![Packagist Version](https://img.shields.io/packagist/v/mbpcoder/grandpa.svg)](https://packagist.org/packages/mbpcoder/grandpa)
+[![Packagist Downloads](https://img.shields.io/packagist/dt/mbpcoder/grandpa.svg)](https://packagist.org/packages/mbpcoder/grandpa)
+![PHP Version](https://img.shields.io/badge/php-%3E%3D8.1-777BB4)
+
 [English](README.md) | فارسی
 
 Grandpa یک ابزار سبک و کم‌وابستگی PHP برای بیلد، دیپلوی و زمان‌بندی وظایف
@@ -11,7 +15,7 @@ Grandpa یک ابزار سبک و کم‌وابستگی PHP برای بیلد، 
 سپس آن‌ها را از طریق خط فرمان، اسکریپت‌های Composer یا یک زمان‌بندی cron اجرا
 می‌کنید.
 
-از Grandpa برای این کارها استفاده کنید:
+**از Grandpa برای این کارها استفاده کنید:**
 
 - 📤 **دیپلوی روی FTP/FTPS** به هاست‌های اشتراکی (cPanel، DirectAdmin) که
   دسترسی SSH ندارند، با آپلود فقط فایل‌هایی که از آخرین دیپلوی تغییر کرده‌اند.
@@ -24,6 +28,8 @@ Grandpa یک ابزار سبک و کم‌وابستگی PHP برای بیلد، 
   Mix/Next.js/Angular/Vue با `grandpa init`.
 - 💬 **ارسال اعلان تلگرام** از داخل یک وظیفه، مثلاً برای گزارش وضعیت دیپلوی.
 
+---
+
 ## 📋 فهرست مطالب
 
 - [نصب](#نصب)
@@ -33,6 +39,8 @@ Grandpa یک ابزار سبک و کم‌وابستگی PHP برای بیلد، 
 - [مرجع خط فرمان](#مرجع-خط-فرمان)
 - [دستورالعمل‌ها](#دستورالعمل‌ها)
 - [زمان‌بندی وظایف](#زمان‌بندی-وظایف)
+
+---
 
 ## 📦 نصب
 
@@ -75,6 +83,8 @@ composer install
 
 و فایل اجرایی را مستقیماً از داخل مخزن با `php bin/grandpa ...` اجرا کنید،
 همان‌طور که در ادامه‌ی این README استفاده شده است.
+
+---
 
 ## 🚀 دیپلوی
 
@@ -269,6 +279,8 @@ php bin/grandpa --file=runner.php deploy
 php bin/grandpa runner.php
 ```
 
+---
+
 ## ⌨️ مرجع خط فرمان
 
 | دستور | کاری که انجام می‌دهد |
@@ -432,6 +444,8 @@ task('git:update-all', function () {
 `git()->pull()` کمک‌کننده‌های ساده‌ای هستند که می‌توانید برای اسکریپت‌های
 مشابه دوباره ترکیب کنید (مثلاً فیلتر بر اساس نام شاخه، یا گزارش‌دهی فقط
 مخازنی که تغییر دارند) به‌جای یک دستور ثابت واحد.
+
+---
 
 ## ⏰ زمان‌بندی وظایف
 

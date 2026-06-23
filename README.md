@@ -1,5 +1,9 @@
 # 👴 Grandpa — a Pure PHP Deploy & Task Scheduler
 
+[![Packagist Version](https://img.shields.io/packagist/v/mbpcoder/grandpa.svg)](https://packagist.org/packages/mbpcoder/grandpa)
+[![Packagist Downloads](https://img.shields.io/packagist/dt/mbpcoder/grandpa.svg)](https://packagist.org/packages/mbpcoder/grandpa)
+![PHP Version](https://img.shields.io/badge/php-%3E%3D8.1-777BB4)
+
 English | [فارسی](README.fa.md)
 
 Grandpa is a lightweight, dependency-light PHP build, deploy, and task
@@ -8,7 +12,7 @@ scheduling tool for PHP projects. Think of it as a minimal alternative to
 describe deploy and maintenance tasks once in a plain PHP file, then run them
 from the command line, via Composer scripts, or on a cron schedule.
 
-Use Grandpa to:
+**Use Grandpa to:**
 
 - 📤 **Deploy over FTP/FTPS** to shared hosting (cPanel, DirectAdmin) that has
   no SSH access, uploading only the files that changed since the last deploy.
@@ -21,6 +25,8 @@ Use Grandpa to:
   Next.js/Angular/Vue projects with `grandpa init`.
 - 💬 **Send Telegram notifications** from a task, e.g. to report deploy status.
 
+---
+
 ## 📋 Table of contents
 
 - [Installation](#installation)
@@ -30,6 +36,8 @@ Use Grandpa to:
 - [CLI reference](#cli-reference)
 - [Recipes](#recipes)
 - [Scheduling tasks](#scheduling-tasks)
+
+---
 
 ## 📦 Installation
 
@@ -59,7 +67,8 @@ config bin-dir --absolute` to find it) is on your shell's `PATH`. Once it is,
 every command in this README also works as plain `grandpa ...` instead of
 `php bin/grandpa ...`.
 
-### Without Composer: download the `.phar`
+<details>
+<summary><strong>Without Composer: download the <code>.phar</code></strong></summary>
 
 If you don't want to add Grandpa as a Composer dependency, download the
 pre-built [`grandpa.phar`](https://raw.githubusercontent.com/mbpcoder/grandpa/claude/tender-davinci-rkpskn/grandpa.phar)
@@ -72,12 +81,10 @@ chmod +x grandpa.phar
 php grandpa.phar deploy
 ```
 
-#### Installing the `.phar` as a global `grandpa` command
+**Installing the `.phar` as a global `grandpa` command**
 
-**Linux / macOS**
-
-Download it, make it executable, and move it onto your `PATH` (dropping the
-`.phar` extension so it reads as a normal command):
+*Linux / macOS* — download it, make it executable, and move it onto your
+`PATH` (dropping the `.phar` extension so it reads as a normal command):
 
 ```
 curl -LO https://raw.githubusercontent.com/mbpcoder/grandpa/claude/tender-davinci-rkpskn/grandpa.phar
@@ -87,11 +94,9 @@ sudo mv grandpa.phar /usr/local/bin/grandpa
 
 Now you can run `grandpa deploy` from anywhere.
 
-**Windows**
-
-Download `grandpa.phar` into a folder that's on your `PATH` (e.g.
-`C:\tools\grandpa\`), then create a `grandpa.bat` next to it so Windows knows
-how to execute the phar through PHP:
+*Windows* — download `grandpa.phar` into a folder that's on your `PATH`
+(e.g. `C:\tools\grandpa\`), then create a `grandpa.bat` next to it so
+Windows knows how to execute the phar through PHP:
 
 ```
 @echo off
@@ -102,7 +107,10 @@ Save that as `C:\tools\grandpa\grandpa.bat`, add `C:\tools\grandpa` to your
 `PATH` environment variable, and `grandpa deploy` will work from any
 PowerShell or Command Prompt window.
 
-### Using Grandpa in a Laravel project
+</details>
+
+<details>
+<summary><strong>Using Grandpa in a Laravel project</strong></summary>
 
 Grandpa isn't Laravel-specific, but it's a natural fit for deploying one.
 Either way works:
@@ -146,7 +154,10 @@ alongside) cron, by adding a task with `->everyMinute()` that runs
 `php artisan schedule:run`, then triggering Grandpa itself once a minute —
 see [Scheduling tasks](#-scheduling-tasks).
 
-### Working on this repository directly
+</details>
+
+<details>
+<summary><strong>Working on this repository directly</strong></summary>
 
 If you're hacking on Grandpa itself (this repo), install dependencies with:
 
@@ -156,6 +167,10 @@ composer install
 
 and run the binary straight out of the repo with `php bin/grandpa ...`, as
 used throughout the rest of this README.
+
+</details>
+
+---
 
 ## 🚀 Deploy
 
@@ -332,6 +347,8 @@ schedule is currently due (tasks with an unmet schedule are skipped silently):
 php bin/grandpa runner.php
 ```
 
+---
+
 ## ⌨️ CLI reference
 
 | Command | What it does |
@@ -496,6 +513,8 @@ task('git:update-all', function () {
 (e.g. filtering by branch name, or only reporting repos with changes)
 instead of a single fixed command.
 
+---
+
 ## ⏰ Scheduling tasks
 
 `task()` returns the `Task` instance, so you can chain Laravel-style schedule helpers
@@ -522,6 +541,8 @@ Available schedule helpers: `everyMinute()`, `everyTwoMinutes()`, `everyFiveMinu
 `weeklyOn(int $dayOfWeek, string $time)`, `monthly()`,
 `monthlyOn(int $dayOfMonth, string $time)`, `yearly()`, or a raw `cron(string $expression)`
 for anything custom (standard 5-field cron syntax).
+
+---
 
 ## 🔁 Repeating and retrying tasks
 
